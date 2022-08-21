@@ -12,4 +12,4 @@ tech:
   - Game Design
 ---
 
-Hyperlands is the former second biggest non-featured MCPE server, with it hitting peaks of over 2k players. I have helped develop, test, and create ideas for the server with me currently specializing in Web Development. The server boasts an [active discord community](discord.gg/hyperlands) of 30,000 people of which I have been a memer of since 2019.
+Hyperlands is the former second biggest non-featured MCPE server, with it hitting peaks of over 2k players. I have helped develop, test, and create ideas for the server with me currently specializing in Web Development. The server boasts an [active discord community](discord.gg/hyperlands) of 30,000 people of which I have been a member of since 2019.
