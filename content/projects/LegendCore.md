@@ -2,7 +2,7 @@
 date: '2022-4-18'
 title: 'LegendNetwork Core'
 github: 'https://github.com/Swofty-Developments/LegendCore-GeyserSupport'
-external: 'https://github.com/Swofty-Developments/LegendCore-GeyserSupport'
+external: 'https://track.the-atlas.net'
 tech:
   - PHP
   - Minecraft
@@ -11,6 +11,8 @@ tech:
   - NMS
   - Netty
 showInProjects: true
+ios: 'https://github.com/Swofty-Developments/LegendCore-GeyserSupport'
+android: 'https://github.com/Swofty-Developments/LegendCore-GeyserSupport'
 company: 'LegendNetwork'
 ---
 
