@@ -1,9 +1,9 @@
 ---
-date: '2015-12-21'
+date: '2017-1-21'
 title: 'Translation Development'
 company: 'Hypixel'
 location: 'Los Angeles, CA'
-range: 'December 2015 - August 2017'
+range: 'December 2016 - August 2017'
 url: 'https://hypixel.net'
 ---
 
