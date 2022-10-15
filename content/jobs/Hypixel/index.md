@@ -1,12 +1,11 @@
 ---
-date: '2017-1-21'
-title: 'Translation Development'
+date: '2016-1-21'
+title: 'Translation'
 company: 'Hypixel'
 location: 'Los Angeles, CA'
-range: 'December 2016 - August 2017'
+range: 'December 2015 - August 2016'
 url: 'https://hypixel.net'
 ---
 
-- Developed and maintained internal systems to connect to external translation softwares
-- Manually tested sites in various browsers and mobile devices to ensure cross-browser compatibility and responsiveness
-- Worked with a team of other developers to ensure clients overall goal
+- Maintained and provided translations for public facing system components
+- Worked with a team to ensure clients overall goal
