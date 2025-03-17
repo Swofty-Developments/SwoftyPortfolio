@@ -70,7 +70,7 @@ const Hero = () => {
         <a href="https://discord.gg/atlasmc" target="_blank" rel="noreferrer">
           Atlas Network
         </a>
-        .
+        . Please note that my Discord username is only "swofty" - any other accounts are impersonators.
       </p>
     </>
   );
