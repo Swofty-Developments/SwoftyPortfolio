@@ -66,6 +66,24 @@ const StyledTabList = styled.div`
   }
 `;
 
+const StyledCategoryHeader = styled.div`
+  padding: 10px 20px;
+  margin-top: ${({ isFirst }) => (isFirst ? '0' : '15px')};
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+  font-weight: 600;
+  border-left: 2px solid var(--green);
+  pointer-events: none;
+
+  @media (max-width: 600px) {
+    border-left: 0;
+    border-bottom: 2px solid var(--green);
+    text-align: center;
+    min-width: 120px;
+  }
+`;
+
 const StyledTabButton = styled.button`
   ${({ theme }) => theme.mixins.link};
   display: flex;
@@ -108,7 +126,9 @@ const StyledHighlight = styled.div`
   height: var(--tab-height);
   border-radius: var(--border-radius);
   background: var(--green);
-  transform: translateY(calc(${({ activeTabId }) => activeTabId} * var(--tab-height)));
+  transform: translateY(
+    calc(${({ activeTabId, categoryOffset }) => activeTabId + categoryOffset} * var(--tab-height))
+  );
   transition: transform 0.25s cubic-bezier(0.645, 0.045, 0.355, 1);
   transition-delay: 0.1s;
 
@@ -179,6 +199,7 @@ const Jobs = () => {
               location
               range
               url
+              category
             }
             html
           }
@@ -188,6 +209,30 @@ const Jobs = () => {
   `);
 
   const jobsData = data.jobs.edges;
+
+  // Group jobs by category
+  const groupedJobs = jobsData.reduce((acc, { node }) => {
+    const category = node.frontmatter.category || 'Online';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push({ node });
+    return acc;
+  }, {});
+
+  // Create a flattened array with category headers
+  const flattenedJobs = [];
+  // Sort categories with Real Life first, then Online
+  const categoryOrder = ['Real Life', 'Online'];
+  Object.keys(groupedJobs)
+    .sort((a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b))
+    .forEach(category => {
+      flattenedJobs.push({ isCategory: true, category });
+      flattenedJobs.push(...groupedJobs[category]);
+    });
+
+  // Create an array of just jobs (no categories) for panel content
+  const jobsOnly = flattenedJobs.filter(item => !item.isCategory);
 
   const [activeTabId, setActiveTabId] = useState(0);
   const [tabFocus, setTabFocus] = useState(null);
@@ -248,30 +293,52 @@ const Jobs = () => {
 
       <div className="inner">
         <StyledTabList role="tablist" aria-label="Job tabs" onKeyDown={e => onKeyDown(e)}>
-          {jobsData &&
-            jobsData.map(({ node }, i) => {
-              const { company } = node.frontmatter;
+          {flattenedJobs &&
+            flattenedJobs.map((item, i) => {
+              if (item.isCategory) {
+                return (
+                  <StyledCategoryHeader key={`cat-${i}`} isFirst={i === 0}>
+                    {item.category}
+                  </StyledCategoryHeader>
+                );
+              }
+              const { company } = item.node.frontmatter;
+              const actualTabIndex = flattenedJobs.slice(0, i).filter(j => !j.isCategory).length;
               return (
                 <StyledTabButton
                   key={i}
-                  isActive={activeTabId === i}
-                  onClick={() => setActiveTabId(i)}
-                  ref={el => (tabs.current[i] = el)}
-                  id={`tab-${i}`}
+                  isActive={activeTabId === actualTabIndex}
+                  onClick={() => setActiveTabId(actualTabIndex)}
+                  ref={el => (tabs.current[actualTabIndex] = el)}
+                  id={`tab-${actualTabIndex}`}
                   role="tab"
-                  tabIndex={activeTabId === i ? '0' : '-1'}
-                  aria-selected={activeTabId === i ? true : false}
-                  aria-controls={`panel-${i}`}>
+                  tabIndex={activeTabId === actualTabIndex ? '0' : '-1'}
+                  aria-selected={activeTabId === actualTabIndex ? true : false}
+                  aria-controls={`panel-${actualTabIndex}`}>
                   <span>{company}</span>
                 </StyledTabButton>
               );
             })}
-          <StyledHighlight activeTabId={activeTabId} />
+          <StyledHighlight
+            activeTabId={activeTabId}
+            categoryOffset={
+              flattenedJobs
+                .slice(
+                  0,
+                  flattenedJobs.findIndex(
+                    (item, i) =>
+                      !item.isCategory &&
+                      flattenedJobs.slice(0, i).filter(j => !j.isCategory).length === activeTabId,
+                  ),
+                )
+                .filter(item => item.isCategory).length
+            }
+          />
         </StyledTabList>
 
         <StyledTabPanels>
-          {jobsData &&
-            jobsData.map(({ node }, i) => {
+          {jobsOnly &&
+            jobsOnly.map(({ node }, i) => {
               const { frontmatter, html } = node;
               const { title, url, company, range } = frontmatter;
 

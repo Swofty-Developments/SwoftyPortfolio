@@ -5,6 +5,7 @@ company: 'Hyperlands'
 location: 'New York, NY'
 range: 'September 2019 - Present'
 url: 'https://discord.gg/hyperlands'
+category: 'Online'
 ---
 
 - Collaborate with a small team of designers / developers to spearhead a new brand and design system for HyperLands DevOps system

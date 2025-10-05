@@ -5,6 +5,7 @@ company: 'Fiverr'
 location: 'Cupertino, CA'
 range: 'July 2017 - December 2019'
 url: 'https://www.fiverr.com/'
+category: 'Online'
 ---
 
 - Developed and shipped highly interactive web applications for clients utilizing React

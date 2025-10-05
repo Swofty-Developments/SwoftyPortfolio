@@ -5,6 +5,7 @@ company: 'Legend Network'
 location: 'Illanoi, CH'
 range: 'April 2018 - August 2021'
 url: 'https://twitter.com/LegendNetworkUS'
+category: 'Online'
 ---
 
 - Helped solidify a brand direction for blistabloc that spans both packaging and web

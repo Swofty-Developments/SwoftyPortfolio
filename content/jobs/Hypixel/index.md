@@ -5,6 +5,7 @@ company: 'Hypixel'
 location: 'Los Angeles, CA'
 range: 'December 2015 - August 2016'
 url: 'https://hypixel.net'
+category: 'Online'
 ---
 
 - Maintained and provided translations for public facing system components

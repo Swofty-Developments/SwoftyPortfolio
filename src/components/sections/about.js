@@ -125,7 +125,7 @@ const About = () => {
     sr.reveal(revealContainer.current, srConfig());
   }, []);
 
-  const skills = ['Java', 'C#', 'React', 'JSP', 'Node.js', 'Python'];
+  const skills = ['Kubernetes', 'Docker', 'Java', 'Python', 'Kafka', 'PostgreSQL'];
 
   return (
     <StyledAboutSection id="about" ref={revealContainer}>
@@ -136,25 +136,37 @@ const About = () => {
           <div>
             <p>
               Hello! My name is Swofty and I enjoy creating things that live on the internet. My
-              interest in software development started back in 2016 when I first started learning the Minecraft Spigot library — turns out hacking together 
-              a command using the Spigot library taught me alot about Java &amp; Spigot!
+              interest in software development started back in 2016 when I first started learning
+              the Minecraft Spigot library — turns out hacking together a command using the Spigot
+              library taught me alot about Java &amp; Spigot!
             </p>
 
             <p>
-              Fast-forward to today, and I’ve had the privilege of <a href="https://discord.gg/atlasmc/">managing my own server and dev team of over 10</a>,{' '}
-              <a href="https://minecraftpocket-servers.com/server/80103/">working for one of the biggest MCPE servers</a>, and{' '}
-              <a href="https://github.com/Swofty-Developments">delivering over 100 freelance projects</a>
-              . My main focus nowadays is building large-scale, inclusive products and digital
-              experiences with my development team at <a href="https://discord.gg/atlasmc">Atlas Network</a> for both clients and players.
+              Fast-forward to today, and I've had the privilege of{' '}
+              <a href="https://discord.gg/atlasmc/">
+                managing my own server and dev team of over 10
+              </a>
+              ,{' '}
+              <a href="https://minecraftpocket-servers.com/server/80103/">
+                working for one of the biggest MCPE servers
+              </a>
+              , and{' '}
+              <a href="https://github.com/Swofty-Developments">
+                delivering over 100 freelance projects
+              </a>
+              . I'm currently studying Computer Science Advanced with Honours at university,
+              majoring in Mathematics and specializing in Data Science and Artificial Intelligence,
+              where I'm developing expertise in advanced algorithms, machine learning, and system
+              design.
             </p>
 
             <p>
-              I have also recently worked on a variety of {' '}
-              <a href="https://github.com/Swofty-Developments/AtlasRedisAPI">
-                open source projects
+              I have also been working on an{' '}
+              <a href="https://github.com/Swofty-Developments/HypixelSkyBlock">
+                open source recreation of Hypixel SkyBlock
               </a>{' '}
-              for use by both regular people
-              &amp; developers.
+              that has gained hundreds of stars on GitHub, building a complete multiplayer game
+              server from scratch.
             </p>
 
             <p>Here are a few technologies I’ve been working with recently:</p>
