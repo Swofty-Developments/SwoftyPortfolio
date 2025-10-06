@@ -108,14 +108,6 @@ const Awards = () => {
 
   const awards = [
     {
-      title: '2nd Place Winner at Monash Collegiate Programming Competition',
-      issuer: 'Monash Algorithms and Problem Solving',
-      date: 'Oct 2025',
-      description:
-        'Pioneered a small team to win 2nd place in the yearly Monash Collegiate Programming Competition ran by the Monash Algorithms and Problem Solving student team. Various skills involved were algorithm design and implementation, and mathematical domains such as set theory and number theory.',
-      association: 'Monash University',
-    },
-    {
       title: '1st Place Winner at Advent of MAPS 2025',
       issuer: 'Monash Algorithms and Problem Solving',
       date: 'Aug 2025',
