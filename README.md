@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portfolio Website
+
+A modern, modular Next.js portfolio website featuring stunning 3D backgrounds, smooth animations, and a clean design.
+
+## Features
+
+- **Modular Architecture**: Components organized into reusable UI components and sections
+- **3D Background**: Interactive Spline 3D scene background
+- **Smooth Animations**: Intersection Observer-based scroll animations
+- **Responsive Design**: Mobile-first approach with Tailwind CSS
+- **TypeScript**: Full type safety throughout the project
+- **Performance Optimized**: Static generation with Next.js 16
+
+## Project Structure
+
+```
+├── app/
+│   ├── globals.css          # Global styles and animations
+│   ├── layout.tsx            # Root layout with metadata
+│   └── page.tsx              # Main page composition
+├── components/
+│   ├── layout/               # Layout components
+│   │   └── SplineBackground.tsx
+│   └── ui/                   # Reusable UI components
+│       ├── NavBar.tsx
+│       ├── Footer.tsx
+│       ├── ProjectCard.tsx
+│       └── index.ts
+├── sections/                 # Page sections
+│   ├── HeroSection.tsx
+│   ├── AboutSection.tsx
+│   ├── ServicesSection.tsx
+│   ├── WorkSection.tsx
+│   ├── ContactSection.tsx
+│   └── index.ts
+├── types/                    # TypeScript type definitions
+└── utils/                    # Utility functions
+```
 
 ## Getting Started
 
-First, run the development server:
-
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run the development server:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Building for Production
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Customization
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Updating Content
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Hero Section**: Edit [sections/HeroSection.tsx](sections/HeroSection.tsx)
+- **About Section**: Edit [sections/AboutSection.tsx](sections/AboutSection.tsx)
+- **Services**: Edit [sections/ServicesSection.tsx](sections/ServicesSection.tsx)
+- **Portfolio Projects**: Edit [sections/WorkSection.tsx](sections/WorkSection.tsx)
+- **Contact**: Edit [sections/ContactSection.tsx](sections/ContactSection.tsx)
 
-## Deploy on Vercel
+### Changing the 3D Background
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Replace the Spline scene URL in [components/layout/SplineBackground.tsx](components/layout/SplineBackground.tsx):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```tsx
+scene="https://prod.spline.design/your-scene-id/scene.splinecode"
+```
+
+### Styling
+
+Global styles and animations are in [app/globals.css](app/globals.css). Tailwind CSS is used for component styling.
+
+## Technologies
+
+- **Next.js 16** - React framework
+- **TypeScript** - Type safety
+- **Tailwind CSS v4** - Styling
+- **Spline** - 3D graphics
+- **React 19** - UI library
+
+## License
+
+MIT
