@@ -14,9 +14,9 @@
     "@tsparticles/slim": "^3.9.1",
     "framer-motion": "^12.23.25",
     "html2canvas": "^1.4.1",
-    "next": "16.0.6",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "next": "^16.0.7",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
     "resend": "^6.5.2",
     "swiper": "^12.0.3",
     "three": "^0.170.0"
