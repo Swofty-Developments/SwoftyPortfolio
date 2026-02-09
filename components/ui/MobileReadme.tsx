@@ -2,39 +2,88 @@
 
 import { useEffect, useState } from 'react';
 
-type SectionKey = 'hero' | 'about' | 'journey' | 'work' | 'contact' | 'footer';
+type SectionKey = 'hero' | 'about' | 'experience' | 'work' | 'contact';
 
-const techStack = [
-  'Kubernetes',
-  'Docker',
-  'Java',
-  'Python',
-  'TypeScript',
-  'React',
-  'Next.js',
-  'PostgreSQL',
-  'Redis',
-  'AWS',
-  'CI/CD',
-  'Minecraft Development',
+interface Experience {
+  title: string;
+  company: string;
+  period: string;
+  location: string;
+  description: string;
+  type: 'experience';
+}
+
+interface Award {
+  title: string;
+  issuer: string;
+  date: string;
+  description: string;
+  type: 'award';
+}
+
+const experiences: Experience[] = [
+  {
+    title: 'Projects Officer',
+    company: 'Monash Association of Coding',
+    period: 'Oct 2025 - Present',
+    location: 'Hybrid',
+    description:
+      "Designed, coordinated and delivered a range of hands-on coding projects and technical workshops for MAC's student community.",
+    type: 'experience',
+  },
+  {
+    title: 'Technical Project Manager',
+    company: 'Ceebs',
+    period: 'Aug 2025 - Present',
+    location: 'Melbourne, VIC',
+    description:
+      'Designed and orchestrated a large refactor from monolithic to microservices-based food delivery platform with event-sourced CQRS architecture.',
+    type: 'experience',
+  },
+  {
+    title: 'Systems Administrator',
+    company: 'Bathroom Superstore',
+    period: 'Nov 2024 - Present',
+    location: 'Melbourne, VIC',
+    description:
+      'Designed, developed and maintained infrastructure serving over a thousand catalogue items and tens of thousands of monthly requests.',
+    type: 'experience',
+  },
+  {
+    title: 'Software Engineer',
+    company: 'Hypixel Inc',
+    period: 'Sep 2023 - Nov 2024',
+    location: 'Remote',
+    description:
+      "Managed large-scale infrastructure for one of the world's biggest gaming networks, supporting 200,000+ concurrent players.",
+    type: 'experience',
+  },
 ];
 
-const journeyEntries = [
+const awards: Award[] = [
   {
-    title: 'HyperLands',
-    period: '2019 - 2022',
-    description: 'Web development and proxy development for a large MCPE server ecosystem.',
-  },
-  {
-    title: 'SkyBlock Recreation',
-    period: '2021 - Present',
+    title: '2nd Place MCPC 2025',
+    issuer: 'Monash Algorithms and Problem Solving',
+    date: 'Oct 2025',
     description:
-      'Open source Hypixel SkyBlock recreation with hundreds of GitHub stars and a large contributor/user community.',
+      'Pioneered a small team to win 2nd place in the yearly Monash Collegiate Programming Competition.',
+    type: 'award',
   },
   {
-    title: 'University',
-    period: '2023 - Present',
-    description: 'Advanced Computer Science with Honours while majoring in Mathematics.',
+    title: '1st Place Advent of MAPS',
+    issuer: 'Monash Algorithms and Problem Solving',
+    date: 'Aug 2025',
+    description:
+      'Won 1st place in the yearly month-long competitive programming competition.',
+    type: 'award',
+  },
+  {
+    title: '1st Place MACATHON 2025',
+    issuer: 'Monash Association of Coding',
+    date: 'May 2025',
+    description:
+      "Led a team to win 1st place and $1,800 prize at Monash University's 48-hour hackathon.",
+    type: 'award',
   },
 ];
 
@@ -42,26 +91,34 @@ const projects = [
   {
     title: 'SkyBlock Recreation',
     description:
-      'The best commercial Hypixel SkyBlock sandbox/recreation currently available, including gemstones, auction house, bazaar, guilds, quests, islands, and more.',
+      'The best commercial Hypixel SkyBlock Sandbox / Recreation currently available. Contains Gemstones, 70% of Hypixels Items, Dwarven Mines, Guilds, Auction House, NPC shops, Quests, Islands, Bazaar and just about everything else!',
     tags: ['Spigot Library', 'Advanced NMS', 'Java', 'Cloudflare (Anti-DDOS)'],
   },
   {
     title: '2nd Biggest MCMarket Setup',
     description:
-      'Hosted and co-developed the former 2nd highest rated setup on BuiltByBit (formerly MCMarket), combining ~30 plugins and hardening the full deployment lifecycle.',
+      'I both hosted and helped develop the former 2nd highest rated setup on BuiltByBit (formerly MCMarket). It was a detailed SkyBlock setup utilizing a combination of 30 different plugins.',
     tags: ['Server Setup', 'Spigot Library', 'Java'],
   },
   {
     title: 'HyperLands',
     description:
-      'Former second biggest non-featured MCPE server project, including web development, testing, and systems support for a community that reached 30,000 Discord members.',
-    tags: ['React', 'Express', 'Styled Components', 'Proxy Development', 'Game Design'],
+      'Hyperlands is the former second biggest non-featured MCPE server, with it hitting peaks of over 2k players. The server boasts an active discord community of 30,000 people.',
+    tags: ['React', 'Express', 'Styled Components', 'Proxy Development'],
   },
 ];
 
+const techStack = [
+  'Kubernetes', 'Docker', 'Java', 'Python', 'TypeScript',
+  'React', 'Next.js', 'PostgreSQL', 'Redis', 'AWS',
+  'Kafka', 'CI/CD', 'Terraform', 'GraphQL',
+];
+
+type FormStatus = 'idle' | 'sending' | 'success' | 'error';
+
 function SectionLabel({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 mb-6">
+    <div className="flex items-center gap-3 mb-8">
       <div className="h-[1px] w-16 bg-gradient-to-r from-violet-500/0 via-violet-500/60 to-violet-500" />
       <span className="text-[10px] tracking-[0.3em] text-violet-400/60 uppercase">{label}</span>
     </div>
@@ -69,345 +126,472 @@ function SectionLabel({ label }: { label: string }) {
 }
 
 export default function MobileReadme() {
-  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState<Record<SectionKey, boolean>>({
     hero: false,
     about: false,
-    journey: false,
+    experience: false,
     work: false,
     contact: false,
-    footer: false,
   });
 
+  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [formStatus, setFormStatus] = useState<FormStatus>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
   useEffect(() => {
-    const raf = window.requestAnimationFrame(() => {
-      setMounted(true);
-      setVisible((prev) => ({ ...prev, hero: true }));
-    });
-    return () => window.cancelAnimationFrame(raf);
+    setVisible((prev) => ({ ...prev, hero: true }));
   }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) {
-            return;
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const key = entry.target.getAttribute('data-section') as SectionKey | null;
+          if (key) {
+            setVisible((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
           }
-          const key = entry.target.getAttribute('data-mobile-section') as SectionKey | null;
-          if (!key) {
-            return;
-          }
-          setVisible((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
-        });
+        }
       },
-      { threshold: 0.2, rootMargin: '0px 0px -8% 0px' }
+      { threshold: 0.15 }
     );
 
-    const sections = document.querySelectorAll<HTMLElement>('[data-mobile-section]');
-    sections.forEach((section) => observer.observe(section));
-
+    const sections = document.querySelectorAll<HTMLElement>('[data-section]');
+    sections.forEach((s) => observer.observe(s));
     return () => observer.disconnect();
   }, []);
 
-  const revealClass = (key: SectionKey) =>
-    mounted && visible[key]
-      ? 'opacity-100 translate-y-0'
-      : 'opacity-0 translate-y-4';
+  const reveal = (key: SectionKey) =>
+    visible[key] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6';
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormStatus('sending');
+    setErrorMessage('');
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send message');
+      setFormStatus('success');
+      setFormData({ name: '', email: '', message: '' });
+      setTimeout(() => setFormStatus('idle'), 5000);
+    } catch (err) {
+      setFormStatus('error');
+      setErrorMessage(err instanceof Error ? err.message : 'Something went wrong');
+      setTimeout(() => { setFormStatus('idle'); setErrorMessage(''); }, 5000);
+    }
+  };
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-x-hidden scroll-smooth">
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -top-32 -left-20 w-[22rem] h-[22rem] rounded-full bg-violet-600/10 blur-[110px] mobile-blob-a" />
-        <div className="absolute top-[26%] -right-20 w-[20rem] h-[20rem] rounded-full bg-purple-600/10 blur-[105px] mobile-blob-b" />
-        <div className="absolute bottom-[-5rem] left-[20%] w-[18rem] h-[18rem] rounded-full bg-fuchsia-600/10 blur-[100px] mobile-blob-c" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_10%,rgba(167,139,250,0.08),transparent_48%),radial-gradient(circle_at_80%_70%,rgba(232,121,249,0.07),transparent_42%)]" />
+    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+      {/* Static background — no animated blobs, no blur */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-violet-950/15 via-black to-black" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(ellipse at 20% 15%, rgba(139,92,246,0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 85%, rgba(168,85,247,0.04) 0%, transparent 45%)',
+          }}
+        />
       </div>
 
-      <div className="sticky top-0 z-30 border-b border-violet-500/10 bg-black/55 backdrop-blur-xl">
-        <nav className="mx-auto max-w-lg px-4 py-3 flex items-center justify-between text-[11px] tracking-[0.18em] uppercase text-white/50">
-          <a href="#home" className="hover:text-violet-300 transition-colors">Home</a>
-          <a href="#about" className="hover:text-violet-300 transition-colors">About</a>
-          <a href="#journey" className="hover:text-violet-300 transition-colors">Journey</a>
-          <a href="#work" className="hover:text-violet-300 transition-colors">Work</a>
-          <a href="#contact" className="hover:text-violet-300 transition-colors">Contact</a>
-        </nav>
-      </div>
+      {/* Nav — solid bg, no blur */}
+      <nav className="sticky top-0 z-40 border-b border-white/[0.06] bg-black/95">
+        <div className="px-8 py-4 flex items-center justify-between text-[10px] tracking-[0.2em] uppercase text-white/40">
+          <a href="#home" className="active:text-violet-300 transition-colors">Home</a>
+          <a href="#about" className="active:text-violet-300 transition-colors">About</a>
+          <a href="#experience" className="active:text-violet-300 transition-colors">Journey</a>
+          <a href="#work" className="active:text-violet-300 transition-colors">Work</a>
+          <a href="#contact" className="active:text-violet-300 transition-colors">Contact</a>
+        </div>
+      </nav>
 
       <main className="relative z-10">
+        {/* ─── Hero ─── */}
         <section
           id="home"
-          data-mobile-section="hero"
-          className="min-h-[100svh] px-6 pt-24 pb-14 flex flex-col justify-center"
+          data-section="hero"
+          className="min-h-[92svh] px-8 flex flex-col justify-center"
         >
-          <div className="max-w-lg mx-auto w-full">
-            <p
-              className={`text-sm text-violet-300/70 tracking-wide transition-all duration-700 ${revealClass('hero')}`}
-              style={{ transitionDelay: '80ms' }}
-            >
-              Hi, my name is
-            </p>
-            <h1
-              className={`mt-3 text-[clamp(3.4rem,17vw,5rem)] leading-[0.9] transition-all duration-700 ${revealClass('hero')}`}
+          <p
+            className={`text-sm text-violet-300/60 tracking-wide transition-all duration-700 ${reveal('hero')}`}
+            style={{ transitionDelay: '100ms' }}
+          >
+            Hi, my name is
+          </p>
+
+          <h1
+            className={`mt-4 leading-[0.92] transition-all duration-700 ${reveal('hero')}`}
+            style={{
+              fontSize: 'clamp(3.2rem, 16vw, 5.5rem)',
+              fontFamily: "'Playfair Display', Georgia, serif",
+              transitionDelay: '220ms',
+            }}
+          >
+            <span
               style={{
-                transitionDelay: '200ms',
-                fontFamily: "'Playfair Display', Georgia, serif",
+                background: 'linear-gradient(180deg, #c4b5fd 0%, #a855f7 50%, #d946ef 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
               }}
             >
+              SWOFTY.
+            </span>
+          </h1>
+
+          <p
+            className={`mt-6 text-[clamp(1.4rem,6vw,2rem)] text-white/85 transition-all duration-700 ${reveal('hero')}`}
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              transitionDelay: '360ms',
+            }}
+          >
+            I&apos;m a <span className="text-violet-400">DevOps Engineer</span>
+          </p>
+        </section>
+
+        {/* ─── About ─── */}
+        <section id="about" data-section="about" className="px-8 py-24">
+          <div
+            className={`transition-all duration-700 ${reveal('about')}`}
+            style={{ transitionDelay: '40ms' }}
+          >
+            <SectionLabel label="About Me" />
+          </div>
+
+          <h2
+            className={`text-[1.75rem] leading-[1.4] text-white transition-all duration-700 ${reveal('about')}`}
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              transitionDelay: '120ms',
+            }}
+          >
+            Hello! My name is{' '}
+            <span
+              style={{
+                background: 'linear-gradient(180deg, #c4b5fd 0%, #a855f7 50%, #d946ef 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              Swofty
+            </span>{' '}
+            and I enjoy creating things that live on the internet.
+          </h2>
+
+          <div
+            className={`mt-8 space-y-5 transition-all duration-700 ${reveal('about')}`}
+            style={{ transitionDelay: '220ms' }}
+          >
+            <p className="text-white/60 text-[15px] leading-[1.75]">
+              I&apos;m a <span className="text-violet-300/80">computer science student</span> and competitive programmer,
+              currently studying Advanced Computer Science with Honours at university.
+            </p>
+            <p className="text-white/60 text-[15px] leading-[1.75]">
+              Majoring in <span className="text-violet-300/80">Mathematics</span> and specializing in{' '}
+              <span className="text-violet-300/80">Data Science</span> and{' '}
+              <span className="text-violet-300/80">Artificial Intelligence</span>.
+            </p>
+            <p className="text-white/60 text-[15px] leading-[1.75]">
+              I have extensive experience with <span className="text-violet-300/80">Minecraft development</span> and
+              building large-scale multiplayer experiences, including an open source Hypixel SkyBlock
+              recreation that has gained hundreds of stars on GitHub.
+            </p>
+          </div>
+
+          <div
+            className={`mt-10 flex flex-wrap gap-2.5 transition-all duration-700 ${reveal('about')}`}
+            style={{ transitionDelay: '340ms' }}
+          >
+            {techStack.map((tech) => (
               <span
-                style={{
-                  background: 'linear-gradient(180deg, #c4b5fd 0%, #a855f7 50%, #d946ef 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
+                key={tech}
+                className="text-[11px] px-3.5 py-1.5 rounded-full border border-violet-500/15 bg-violet-500/[0.04] text-violet-300/55"
               >
-                SWOFTY.
+                {tech}
               </span>
-            </h1>
-            <p
-              className={`mt-5 text-3xl text-white/90 transition-all duration-700 ${revealClass('hero')}`}
-              style={{
-                transitionDelay: '320ms',
-                fontFamily: "'Playfair Display', Georgia, serif",
-              }}
-            >
-              I&apos;m a <span className="text-violet-400">DevOps Engineer</span>
-            </p>
+            ))}
           </div>
         </section>
 
-        <section id="about" data-mobile-section="about" className="px-6 py-14">
-          <div className="max-w-lg mx-auto">
-            <div className={`transition-all duration-700 ${revealClass('about')}`} style={{ transitionDelay: '40ms' }}>
-              <SectionLabel label="About Me" />
-            </div>
+        {/* ─── Experience & Awards ─── */}
+        <section id="experience" data-section="experience" className="px-8 py-24">
+          <div
+            className={`transition-all duration-700 ${reveal('experience')}`}
+            style={{ transitionDelay: '40ms' }}
+          >
+            <SectionLabel label="Experience & Awards" />
+          </div>
 
-            <h2
-              className={`text-3xl leading-[1.3] text-white transition-all duration-700 ${revealClass('about')}`}
-              style={{
-                transitionDelay: '120ms',
-                fontFamily: "'Playfair Display', Georgia, serif",
-              }}
-            >
-              Hello! My name is{' '}
-              <span
+          <h2
+            className={`text-[2rem] text-white transition-all duration-700 ${reveal('experience')}`}
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              transitionDelay: '120ms',
+            }}
+          >
+            MY{' '}
+            <span className="bg-gradient-to-r from-violet-300 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+              JOURNEY
+            </span>
+          </h2>
+
+          {/* Experiences */}
+          <div className="mt-10 space-y-5">
+            {experiences.map((entry, i) => (
+              <article
+                key={entry.company}
+                className={`rounded-2xl p-6 border border-violet-500/10 transition-all duration-700 ${reveal('experience')}`}
                 style={{
-                  background: 'linear-gradient(180deg, #c4b5fd 0%, #a855f7 50%, #d946ef 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
+                  transitionDelay: `${200 + i * 80}ms`,
+                  background: 'linear-gradient(145deg, rgba(20,12,35,0.85) 0%, rgba(10,6,20,0.9) 100%)',
                 }}
               >
-                Swofty
-              </span>{' '}
-              and I enjoy creating things that live on the internet.
-            </h2>
-
-            <div className={`mt-7 space-y-5 transition-all duration-700 ${revealClass('about')}`} style={{ transitionDelay: '220ms' }}>
-              <p className="text-white/70 leading-relaxed">
-                I&apos;m a computer science student and competitive programmer, currently studying Advanced Computer Science
-                with Honours at university.
-              </p>
-              <p className="text-white/70 leading-relaxed">
-                Majoring in <span className="text-violet-300/90">Mathematics</span> and specializing in{' '}
-                <span className="text-violet-300/90">Data Science</span> and{' '}
-                <span className="text-violet-300/90">Artificial Intelligence</span>.
-              </p>
-              <p className="text-white/70 leading-relaxed">
-                I have extensive experience with <span className="text-violet-300/90">Minecraft development</span> and
-                building large-scale multiplayer systems, including an open source Hypixel SkyBlock recreation with
-                hundreds of stars on GitHub.
-              </p>
-            </div>
-
-            <div
-              className={`mt-8 flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 transition-all duration-700 ${revealClass('about')}`}
-              style={{ transitionDelay: '300ms' }}
-            >
-              {techStack.map((tech) => (
-                <span
-                  key={tech}
-                  className="shrink-0 text-[11px] px-3 py-1.5 rounded-full border border-violet-500/15 bg-violet-500/5 text-violet-300/60"
-                >
-                  {tech}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="journey" data-mobile-section="journey" className="px-6 py-14">
-          <div className="max-w-lg mx-auto">
-            <div className={`transition-all duration-700 ${revealClass('journey')}`} style={{ transitionDelay: '50ms' }}>
-              <SectionLabel label="My Journey" />
-            </div>
-
-            <h2
-              className={`text-4xl text-white transition-all duration-700 ${revealClass('journey')}`}
-              style={{
-                transitionDelay: '130ms',
-                fontFamily: "'Playfair Display', Georgia, serif",
-              }}
-            >
-              MY <span className="text-violet-400">JOURNEY</span>
-            </h2>
-
-            <div className="relative mt-8 pl-6">
-              <div className="absolute left-2.5 top-1 bottom-1 w-px bg-gradient-to-b from-violet-400/80 via-violet-500/40 to-transparent" />
-              {journeyEntries.map((entry, index) => (
-                <article
-                  key={entry.title}
-                  className={`relative mb-5 last:mb-0 rounded-2xl p-4 border border-violet-500/15 transition-all duration-700 ${revealClass('journey')}`}
-                  style={{
-                    transitionDelay: `${210 + index * 90}ms`,
-                    background: 'linear-gradient(145deg, rgba(20, 12, 35, 0.92) 0%, rgba(12, 8, 24, 0.95) 100%)',
-                    boxShadow:
-                      '0 8px 36px rgba(139, 92, 246, 0.14), 0 0 0 1px rgba(139, 92, 246, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
-                  }}
-                >
-                  <span className="absolute -left-[1.03rem] top-5 w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_20px_rgba(167,139,250,0.65)]" />
-                  <p className="text-[10px] tracking-[0.3em] uppercase text-violet-300/70">{entry.period}</p>
-                  <h3 className="mt-2 text-xl text-white" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-                    {entry.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-white/65">{entry.description}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="work" data-mobile-section="work" className="px-6 py-14">
-          <div className="max-w-lg mx-auto">
-            <div className={`transition-all duration-700 ${revealClass('work')}`} style={{ transitionDelay: '50ms' }}>
-              <SectionLabel label="Selected Work" />
-            </div>
-
-            <h2
-              className={`text-4xl text-white transition-all duration-700 ${revealClass('work')}`}
-              style={{
-                transitionDelay: '130ms',
-                fontFamily: "'Playfair Display', Georgia, serif",
-              }}
-            >
-              Featured <span className="text-violet-400">Projects</span>
-            </h2>
-
-            <div className="mt-8 space-y-4">
-              {projects.map((project, index) => (
-                <article
-                  key={project.title}
-                  className={`rounded-2xl p-5 border border-violet-500/15 transition-all duration-700 ${revealClass('work')}`}
-                  style={{
-                    transitionDelay: `${220 + index * 90}ms`,
-                    background: 'linear-gradient(145deg, rgba(20, 12, 35, 0.92) 0%, rgba(12, 8, 24, 0.95) 100%)',
-                    boxShadow:
-                      '0 10px 48px rgba(139, 92, 246, 0.14), 0 0 0 1px rgba(139, 92, 246, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
-                  }}
-                >
-                  <p className="text-[10px] tracking-[0.3em] text-violet-400/70 uppercase">Featured Project</p>
-                  <h3 className="mt-2 text-2xl text-white" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-                    {project.title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-white/65">{project.description}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {project.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[10px] px-2.5 py-1 rounded-full border border-violet-500/15 bg-violet-500/5 text-violet-300/60"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <p className="text-[10px] tracking-[0.25em] text-violet-400/50 uppercase">{entry.period}</p>
+                    <h3
+                      className="mt-2 text-lg text-white"
+                      style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                    >
+                      {entry.title}
+                    </h3>
+                    <p className="mt-0.5 text-sm text-violet-300/60">{entry.company}</p>
                   </div>
-                </article>
-              ))}
-            </div>
+                  <span className="mt-1 shrink-0 w-2 h-2 rounded-full bg-violet-400/60" />
+                </div>
+                <p className="mt-3 text-[13px] leading-relaxed text-white/50">{entry.description}</p>
+              </article>
+            ))}
+          </div>
+
+          {/* Awards */}
+          <h3
+            className={`mt-14 text-xs tracking-[0.25em] text-fuchsia-400/50 uppercase transition-all duration-700 ${reveal('experience')}`}
+            style={{ transitionDelay: '600ms' }}
+          >
+            Awards
+          </h3>
+
+          <div className="mt-5 space-y-4">
+            {awards.map((award, i) => (
+              <article
+                key={award.title}
+                className={`rounded-2xl p-6 border border-fuchsia-500/10 transition-all duration-700 ${reveal('experience')}`}
+                style={{
+                  transitionDelay: `${660 + i * 80}ms`,
+                  background: 'linear-gradient(145deg, rgba(30,12,35,0.85) 0%, rgba(15,6,20,0.9) 100%)',
+                }}
+              >
+                <p className="text-[10px] tracking-[0.25em] text-fuchsia-400/40 uppercase">{award.date}</p>
+                <h3
+                  className="mt-2 text-lg text-white"
+                  style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                >
+                  {award.title}
+                </h3>
+                <p className="mt-0.5 text-sm text-fuchsia-300/50">{award.issuer}</p>
+                <p className="mt-3 text-[13px] leading-relaxed text-white/50">{award.description}</p>
+              </article>
+            ))}
           </div>
         </section>
 
-        <section id="contact" data-mobile-section="contact" className="px-6 py-14">
-          <div className="max-w-lg mx-auto">
-            <div className={`transition-all duration-700 ${revealClass('contact')}`} style={{ transitionDelay: '50ms' }}>
-              <SectionLabel label="Get In Touch" />
+        {/* ─── Projects ─── */}
+        <section id="work" data-section="work" className="px-8 py-24">
+          <div
+            className={`transition-all duration-700 ${reveal('work')}`}
+            style={{ transitionDelay: '40ms' }}
+          >
+            <SectionLabel label="Selected Work" />
+          </div>
+
+          <h2
+            className={`text-[2rem] text-white transition-all duration-700 ${reveal('work')}`}
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              transitionDelay: '120ms',
+            }}
+          >
+            Featured{' '}
+            <span className="bg-gradient-to-r from-violet-300 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+              Projects
+            </span>
+          </h2>
+
+          <div className="mt-10 space-y-6">
+            {projects.map((project, i) => (
+              <article
+                key={project.title}
+                className={`rounded-2xl p-6 border border-violet-500/10 transition-all duration-700 ${reveal('work')}`}
+                style={{
+                  transitionDelay: `${200 + i * 90}ms`,
+                  background: 'linear-gradient(145deg, rgba(20,12,35,0.85) 0%, rgba(10,6,20,0.9) 100%)',
+                }}
+              >
+                <p className="text-[10px] tracking-[0.25em] text-violet-400/50 uppercase">Featured Project</p>
+                <h3
+                  className="mt-2.5 text-xl text-white"
+                  style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+                >
+                  {project.title}
+                </h3>
+                <p className="mt-3 text-[13px] leading-[1.7] text-white/50">{project.description}</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {project.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[10px] px-2.5 py-1 rounded-full border border-violet-500/12 bg-violet-500/[0.04] text-violet-300/50"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── Contact ─── */}
+        <section id="contact" data-section="contact" className="px-8 py-24">
+          <div
+            className={`transition-all duration-700 ${reveal('contact')}`}
+            style={{ transitionDelay: '40ms' }}
+          >
+            <SectionLabel label="Get In Touch" />
+          </div>
+
+          <h2
+            className={`text-[2rem] leading-[1.2] text-white transition-all duration-700 ${reveal('contact')}`}
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              transitionDelay: '120ms',
+            }}
+          >
+            Let&apos;s Create Something{' '}
+            <span className="bg-gradient-to-r from-violet-300 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+              Amazing
+            </span>
+          </h2>
+
+          <p
+            className={`mt-5 text-white/50 text-[15px] leading-relaxed transition-all duration-700 ${reveal('contact')}`}
+            style={{ transitionDelay: '200ms' }}
+          >
+            Have a project in mind? Drop me a message and let&apos;s discuss how we can work together.
+          </p>
+
+          <form
+            onSubmit={handleSubmit}
+            className={`mt-10 space-y-6 transition-all duration-700 ${reveal('contact')}`}
+            style={{ transitionDelay: '280ms' }}
+          >
+            <div>
+              <label htmlFor="m-name" className="block text-xs font-semibold text-white/70 tracking-wide uppercase mb-2">
+                Your Name
+              </label>
+              <input
+                type="text"
+                id="m-name"
+                name="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                disabled={formStatus === 'sending'}
+                className="w-full bg-white/[0.04] border border-violet-500/15 rounded-xl px-5 py-4 text-white text-[15px] placeholder-white/20 focus:border-violet-500/40 focus:outline-none transition-colors"
+                placeholder="John Doe"
+              />
             </div>
 
-            <h2
-              className={`text-4xl text-white transition-all duration-700 ${revealClass('contact')}`}
+            <div>
+              <label htmlFor="m-email" className="block text-xs font-semibold text-white/70 tracking-wide uppercase mb-2">
+                Your Email
+              </label>
+              <input
+                type="email"
+                id="m-email"
+                name="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+                disabled={formStatus === 'sending'}
+                className="w-full bg-white/[0.04] border border-violet-500/15 rounded-xl px-5 py-4 text-white text-[15px] placeholder-white/20 focus:border-violet-500/40 focus:outline-none transition-colors"
+                placeholder="john@example.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="m-message" className="block text-xs font-semibold text-white/70 tracking-wide uppercase mb-2">
+                Your Message
+              </label>
+              <textarea
+                id="m-message"
+                name="message"
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                required
+                rows={5}
+                disabled={formStatus === 'sending'}
+                className="w-full bg-white/[0.04] border border-violet-500/15 rounded-xl px-5 py-4 text-white text-[15px] placeholder-white/20 focus:border-violet-500/40 focus:outline-none transition-colors resize-none"
+                placeholder="Tell me about your project..."
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={formStatus === 'sending'}
+              className="w-full py-4 rounded-xl text-white text-[15px] font-semibold tracking-wider transition-all disabled:opacity-50"
               style={{
-                transitionDelay: '130ms',
-                fontFamily: "'Playfair Display', Georgia, serif",
+                background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                boxShadow: '0 8px 32px rgba(168,85,247,0.25)',
               }}
             >
-              Let&apos;s Build Something Great
-            </h2>
+              {formStatus === 'sending' ? 'SENDING...' : 'SEND MESSAGE'}
+            </button>
 
-            <div className={`mt-5 space-y-3 transition-all duration-700 ${revealClass('contact')}`} style={{ transitionDelay: '220ms' }}>
-              <p className="text-white/70 leading-relaxed">
-                I&apos;m always open to interesting projects, engineering challenges, and collaborations.
-              </p>
-              <p className="text-white/75">
-                Email:{' '}
-                <a href="mailto:contact@swofty.dev" className="text-violet-300 hover:text-fuchsia-300 transition-colors">
-                  contact@swofty.dev
-                </a>
-              </p>
-              <p className="text-white/75">
-                GitHub:{' '}
-                <a
-                  href="https://github.com/Swofty-Developments"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-violet-300 hover:text-fuchsia-300 transition-colors"
-                >
-                  github.com/Swofty-Developments
-                </a>
-              </p>
-              <p className="text-white/65">Discord: Available upon request</p>
-            </div>
+            {formStatus === 'success' && (
+              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                <p className="text-green-400 text-sm">Message sent! I&apos;ll get back to you soon.</p>
+              </div>
+            )}
 
-            <a
-              href="mailto:contact@swofty.dev"
-              className={`inline-flex mt-8 items-center justify-center rounded-xl px-5 py-3 text-sm font-medium text-white border border-violet-400/35 bg-violet-500/10 hover:bg-violet-500/20 transition-all duration-500 shadow-[0_0_28px_rgba(139,92,246,0.2)] ${revealClass('contact')}`}
-              style={{ transitionDelay: '300ms' }}
-            >
-              Say Hello
+            {formStatus === 'error' && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                <p className="text-red-400 text-sm">{errorMessage || 'Failed to send. Please try again.'}</p>
+              </div>
+            )}
+          </form>
+
+          <p
+            className={`mt-8 text-white/40 text-sm transition-all duration-700 ${reveal('contact')}`}
+            style={{ transitionDelay: '360ms' }}
+          >
+            Or reach me directly at{' '}
+            <a href="mailto:admin@swofty.net" className="text-violet-400">
+              admin@swofty.net
             </a>
-          </div>
+          </p>
         </section>
 
-        <footer id="footer" data-mobile-section="footer" className="px-6 pt-8 pb-10 border-t border-violet-500/10">
-          <div className={`max-w-lg mx-auto text-center transition-all duration-700 ${revealClass('footer')}`}>
-            <p className="text-xs text-white/45">© {new Date().getFullYear()} Swofty Developments</p>
-            <p className="text-[11px] mt-2 text-violet-300/45">Built with Next.js, React, TypeScript, and Tailwind CSS</p>
-          </div>
+        {/* ─── Footer ─── */}
+        <footer className="px-8 pt-8 pb-12 border-t border-white/[0.04]">
+          <p className="text-center text-[11px] text-white/30">
+            Made with love by{' '}
+            <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+              Swofty
+            </span>
+          </p>
+          <p className="text-center text-[10px] mt-2 text-white/20">
+            Built with Next.js, React, TypeScript, and Tailwind CSS
+          </p>
         </footer>
       </main>
-
-      <style jsx>{`
-        .mobile-blob-a {
-          animation: mobileBlobA 14s ease-in-out infinite;
-        }
-        .mobile-blob-b {
-          animation: mobileBlobB 18s ease-in-out infinite;
-        }
-        .mobile-blob-c {
-          animation: mobileBlobC 16s ease-in-out infinite;
-        }
-        @keyframes mobileBlobA {
-          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-          50% { transform: translate3d(24px, 30px, 0) scale(1.08); }
-        }
-        @keyframes mobileBlobB {
-          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-          50% { transform: translate3d(-20px, -26px, 0) scale(1.07); }
-        }
-        @keyframes mobileBlobC {
-          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-          50% { transform: translate3d(10px, -18px, 0) scale(1.1); }
-        }
-      `}</style>
     </div>
   );
 }
