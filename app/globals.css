@@ -121,3 +121,17 @@ html[data-nav-mode="particles"] body {
     opacity: 0;
   }
 }
+
+/* AboutSection highlight modes — CSS class-based opacity instead of per-frame JS */
+.about-highlight-skills [data-category="skill"] {
+  opacity: 0.65 !important;
+}
+.about-highlight-skills [data-category="interest"] {
+  opacity: 0.03 !important;
+}
+.about-highlight-interests [data-category="interest"] {
+  opacity: 0.65 !important;
+}
+.about-highlight-interests [data-category="skill"] {
+  opacity: 0.03 !important;
+}
