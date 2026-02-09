@@ -125,6 +125,7 @@ export default function ExperienceSection() {
   const isVisibleRef = useRef(false);
   const frameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
+  const frameCountRef = useRef(0);
   const isAnimatingRef = useRef(false);
   const wasGrabbingRef = useRef(false);
 
@@ -364,7 +365,7 @@ export default function ExperienceSection() {
 
     const width = rect.width;
     const height = rect.height;
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = Math.round(window.devicePixelRatio || 1);
     const canvasWidth = Math.floor(width * dpr);
     const canvasHeight = Math.floor(height * dpr);
 
@@ -473,8 +474,11 @@ export default function ExperienceSection() {
 
       const mouse = mouseRef.current;
       const now = performance.now();
-      if (!cachedRectRef.current && containerRef.current) {
-        cachedRectRef.current = containerRef.current.getBoundingClientRect();
+      frameCountRef.current++;
+      if (frameCountRef.current % 10 === 0 || !cachedRectRef.current) {
+        if (containerRef.current) {
+          cachedRectRef.current = containerRef.current.getBoundingClientRect();
+        }
       }
       const rect = cachedRectRef.current;
       if (!rect) {
@@ -883,12 +887,13 @@ export default function ExperienceSection() {
                   />
 
                   <div
-                    className={`relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-300 border border-white/30 backdrop-blur-sm shadow-2xl overflow-hidden ${
+                    className={`relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-300 border border-white/30 backdrop-blur-sm shadow-2xl ${
                       isExperience
                         ? 'bg-gradient-to-br from-violet-500/80 via-purple-600/80 to-purple-700/80'
                         : 'bg-gradient-to-br from-fuchsia-500/80 via-pink-600/80 to-pink-700/80'
                     }`}
                     style={{
+                      clipPath: 'circle(50%)',
                       boxShadow: isExperience
                         ? '0 0 40px rgba(168,85,247,0.6), inset 0 0 20px rgba(255,255,255,0.1)'
                         : '0 0 40px rgba(236,72,153,0.6), inset 0 0 20px rgba(255,255,255,0.1)',

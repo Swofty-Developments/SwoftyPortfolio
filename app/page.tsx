@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import SplineBackground from '@/components/layout/SplineBackground';
 import NavBar from '@/components/ui/NavBar';
@@ -17,7 +17,6 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [siteReady, setSiteReady] = useState(false);
-  const settleTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Check if device is mobile based on screen width and touch capability
@@ -34,24 +33,11 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Give the browser/GPU time to settle after Spline reports loaded
   const handleSplineLoad = useCallback(() => {
-    if (settleTimerRef.current !== null) return;
-    settleTimerRef.current = window.setTimeout(() => {
-      setSiteReady(true);
-    }, 2000);
+    setSiteReady(true);
   }, []);
 
-  // Cleanup settle timer
-  useEffect(() => {
-    return () => {
-      if (settleTimerRef.current !== null) {
-        window.clearTimeout(settleTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Fallback: if Spline never loads, dismiss after 10s
+  // Fallback: if Spline never loads, dismiss after 3s
   useEffect(() => {
     if (!isLoaded || isMobile || siteReady) {
       return;
@@ -59,7 +45,7 @@ export default function Home() {
 
     const fallbackTimer = window.setTimeout(() => {
       setSiteReady(true);
-    }, 10000);
+    }, 3000);
 
     return () => window.clearTimeout(fallbackTimer);
   }, [isLoaded, isMobile, siteReady]);

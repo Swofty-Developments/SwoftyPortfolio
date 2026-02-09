@@ -73,11 +73,6 @@ html[data-nav-mode="particles"] body {
   contain: layout style;
 }
 
-#about, #experience, #work, #contact {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 900px;
-}
-
 @keyframes slideInFromRight {
   0% {
     opacity: 0;

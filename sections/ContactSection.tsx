@@ -1,16 +1,7 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import dynamic from 'next/dynamic';
-import type { Application } from '@splinetool/runtime';
-
-const Spline = dynamic(() => import('@splinetool/react-spline'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full bg-gradient-to-br from-violet-950/30 via-black to-black" />
-  ),
-});
 
 type ParticleConfig = {
   uX: number;
@@ -21,7 +12,9 @@ type ParticleConfig = {
   size: number;
 };
 
-const PARTICLE_LINK_DISTANCE = 180;
+const PARTICLE_LINK_DISTANCE = 120;
+const LINK_MAX_ALPHA = 0.5;
+const LINK_ALPHA_BUCKET_COUNT = 5;
 
 const createSeededRandom = (seed: number) => {
   return () => {
@@ -35,7 +28,7 @@ const createSeededRandom = (seed: number) => {
 
 const createParticleConfig = (): ParticleConfig[] => {
   const rand = createSeededRandom(20250302);
-  return Array.from({ length: 50 }, () => ({
+  return Array.from({ length: 20 }, () => ({
     uX: rand(),
     uY: rand(),
     ampX: 40 + rand() * 40,
@@ -56,8 +49,6 @@ interface FormData {
 export default function ContactSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const splineContainerRef = useRef<HTMLDivElement>(null);
-  const splineRef = useRef<Application | null>(null);
   const isVisibleRef = useRef(false);
   const frameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
@@ -111,7 +102,7 @@ export default function ContactSection() {
         return;
       }
 
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.round(window.devicePixelRatio || 1);
       const scaledWidth = Math.floor(w * dpr);
       const scaledHeight = Math.floor(h * dpr);
       if (canvas.width !== scaledWidth || canvas.height !== scaledHeight) {
@@ -132,10 +123,10 @@ export default function ContactSection() {
         particle.y = centerY + baseY + Math.cos(timeRef.current * p.speed + idx) * p.ampY;
       }
 
-      ctx.shadowBlur = 4;
-      ctx.shadowColor = '#a855f7';
       ctx.strokeStyle = '#a855f7';
       ctx.lineWidth = 1.5;
+      const linkBuckets: Array<Array<{ ax: number; ay: number; bx: number; by: number }>> =
+        Array.from({ length: LINK_ALPHA_BUCKET_COUNT }, () => []);
 
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -147,12 +138,25 @@ export default function ContactSection() {
           if (distSq >= linkDistanceSq) continue;
           const dist = Math.sqrt(distSq);
           const t = 1 - dist / PARTICLE_LINK_DISTANCE;
-          ctx.globalAlpha = Math.pow(t, 1.5) * 0.5;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
+          const alpha = Math.pow(t, 1.5) * LINK_MAX_ALPHA;
+          if (alpha <= 0) continue;
+          const bucketIdx = Math.min(
+            LINK_ALPHA_BUCKET_COUNT - 1,
+            Math.floor((alpha * LINK_ALPHA_BUCKET_COUNT) / LINK_MAX_ALPHA)
+          );
+          linkBuckets[bucketIdx].push({ ax: a.x, ay: a.y, bx: b.x, by: b.y });
         }
+      }
+      for (let bucketIdx = 0; bucketIdx < LINK_ALPHA_BUCKET_COUNT; bucketIdx++) {
+        const bucket = linkBuckets[bucketIdx];
+        if (bucket.length === 0) continue;
+        ctx.globalAlpha = ((bucketIdx + 0.5) / LINK_ALPHA_BUCKET_COUNT) * LINK_MAX_ALPHA;
+        ctx.beginPath();
+        for (const line of bucket) {
+          ctx.moveTo(line.ax, line.ay);
+          ctx.lineTo(line.bx, line.by);
+        }
+        ctx.stroke();
       }
 
       ctx.fillStyle = '#a855f7';
@@ -165,7 +169,6 @@ export default function ContactSection() {
       ctx.fill();
 
       ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
       frameRef.current = requestAnimationFrame(animate);
     };
 
@@ -206,14 +209,6 @@ export default function ContactSection() {
       observer.disconnect();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
-
-  const handleSplineLoad = useCallback((spline: Application) => {
-    splineRef.current = spline;
-    if (splineContainerRef.current) {
-      splineContainerRef.current.classList.remove('opacity-0');
-      splineContainerRef.current.classList.add('opacity-100');
-    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -264,9 +259,8 @@ export default function ContactSection() {
       ref={sectionRef}
       className="relative min-h-screen overflow-hidden"
     >
-      {/* Layer 1: Spline Background - receives all mouse events */}
+      {/* Layer 1: Gradient background */}
       <div className="absolute inset-0" style={{ zIndex: 1 }}>
-        {/* Gradient fallback */}
         <div className="absolute inset-0 bg-gradient-to-br from-violet-950/30 via-black to-black pointer-events-none">
           <div className="absolute inset-0">
             <div
@@ -282,23 +276,6 @@ export default function ContactSection() {
               style={{ animation: 'pulse 4s ease-in-out infinite 2s' }}
             />
           </div>
-        </div>
-
-        {/* Spline 3D Scene - this needs pointer events */}
-        <div
-          ref={splineContainerRef}
-          className="absolute inset-0 transition-opacity duration-1000 opacity-0"
-        >
-          <Spline
-            scene="https://prod.spline.design/MZq7kXo79Cm3jRXM/scene.splinecode"
-            onLoad={handleSplineLoad}
-            style={{
-              width: '100%',
-              height: '100%',
-              position: 'absolute',
-            }}
-            renderOnDemand={true}
-          />
         </div>
       </div>
 

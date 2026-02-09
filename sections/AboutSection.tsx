@@ -1,81 +1,25 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 export default function AboutSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const textContentRef = useRef<HTMLDivElement>(null);
+  const spotlightRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const isInViewRef = useRef(false);
-  const mousePosRef = useRef({ x: 0, y: 0 });
-  const [textRect, setTextRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  }>({ top: 0, left: 0, width: 0, height: 0 });
   const [highlightMode, setHighlightMode] = useState<'all' | 'background' | 'skills' | 'interests'>('all');
-  
-  // Store current opacity values for smooth lerping
-  const opacityMapRef = useRef<Map<HTMLElement, number>>(new Map());
-  const animationFrameRef = useRef<number>(0);
-  const animateRef = useRef<() => void>(() => {});
-
-  const stopAnimation = useCallback(() => {
-    if (!animationFrameRef.current) return;
-    cancelAnimationFrame(animationFrameRef.current);
-    animationFrameRef.current = 0;
-  }, []);
-
-  const queueAnimationFrame = useCallback(() => {
-    animationFrameRef.current = requestAnimationFrame(() => {
-      animationFrameRef.current = 0;
-      animateRef.current();
-    });
-  }, []);
-
-  const startAnimation = useCallback(() => {
-    if (animationFrameRef.current) return;
-    if (document.hidden || !isInViewRef.current) return;
-    queueAnimationFrame();
-  }, [queueAnimationFrame]);
 
   // Visibility observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        isInViewRef.current = entry.isIntersecting;
         if (entry.isIntersecting) setIsVisible(true);
-        if (entry.isIntersecting && !document.hidden) {
-          startAnimation();
-        } else {
-          stopAnimation();
-        }
       },
       { threshold: 0.2 }
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, [startAnimation, stopAnimation]);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopAnimation();
-        return;
-      }
-
-      if (isInViewRef.current) {
-        startAnimation();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [startAnimation, stopAnimation]);
+  }, []);
 
   // Listen for contextual actions from navbar
   useEffect(() => {
@@ -110,48 +54,30 @@ export default function AboutSection() {
     };
   }, []);
 
-  // Track text content rect in viewport coordinates
-  const updateTextRect = useCallback(() => {
-    if (textContentRef.current) {
-      const rect = textContentRef.current.getBoundingClientRect();
-      setTextRect({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      });
-    }
-  }, []);
-
+  // Mouse-following spotlight for the scrolling tech background
   useEffect(() => {
-    updateTextRect();
-    let ticking = false;
-    const handleScroll = () => {
-      if (!ticking) {
-        ticking = true;
-        requestAnimationFrame(() => {
-          updateTextRect();
-          ticking = false;
-        });
+    const spotlight = spotlightRef.current;
+    const container = scrollContainerRef.current;
+    if (!spotlight || !container) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const inside =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+
+      if (inside) {
+        spotlight.style.opacity = '1';
+        spotlight.style.setProperty('--spotlight-x', `${e.clientX - rect.left}px`);
+        spotlight.style.setProperty('--spotlight-y', `${e.clientY - rect.top}px`);
+      } else {
+        spotlight.style.opacity = '0';
       }
     };
 
-    window.addEventListener('resize', updateTextRect);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener('resize', updateTextRect);
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [isVisible, updateTextRect]);
-
-  // Track mouse position using ref for smoother updates
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      mousePosRef.current = { x: e.clientX, y: e.clientY };
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
@@ -228,136 +154,20 @@ export default function AboutSection() {
     { text: 'technical writing', category: 'interest' },
   ];
 
-  // Smooth animation loop using requestAnimationFrame
-  useEffect(() => {
-    if (!scrollContainerRef.current) return;
+  const activeHighlight =
+    highlightMode === 'skills' ? 'skill' : highlightMode === 'interests' ? 'interest' : null;
 
-    const lerp = (current: number, target: number, factor: number): number => {
-      return current + (target - current) * factor;
-    };
+  const getSpanOpacity = (category: string): number => {
+    if (activeHighlight) return category === activeHighlight ? 0.65 : 0.03;
+    return 0.12;
+  };
 
-    const calculateTargetOpacity = (el: HTMLElement): number => {
-      const rect = el.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const category = el.getAttribute('data-category');
-
-      const textTop = textRect.top;
-      const textLeft = textRect.left;
-      const textRight = textRect.left + textRect.width;
-      const textBottom = textRect.top + textRect.height;
-
-      // Distance to text rectangle (0 when inside)
-      const dx = Math.max(textLeft - centerX, 0, centerX - textRight);
-      const dy = Math.max(textTop - centerY, 0, centerY - textBottom);
-      const distToText = Math.sqrt(dx * dx + dy * dy);
-
-      // Adjust fade parameters based on highlight mode
-      let innerRadius = 0;
-      let outerRadius = 240;
-      let minOpacityNearText = 0.0;
-      let baseOpacity = 0.12;
-
-      if (highlightMode === 'skills') {
-        if (category === 'skill') {
-          baseOpacity = 0.65;
-          minOpacityNearText = 0.65;
-          outerRadius = 0;
-        } else {
-          baseOpacity = 0.03;
-          minOpacityNearText = 0.03;
-          outerRadius = 0;
-        }
-      } else if (highlightMode === 'interests') {
-        if (category === 'interest') {
-          baseOpacity = 0.65;
-          minOpacityNearText = 0.65;
-          outerRadius = 0;
-        } else {
-          baseOpacity = 0.03;
-          minOpacityNearText = 0.03;
-          outerRadius = 0;
-        }
-      } else if (highlightMode === 'background') {
-        baseOpacity = 0.06;
-        minOpacityNearText = 0.0;
-        outerRadius = 180;
-      }
-
-      let textFadeOpacity: number;
-
-      if (distToText <= innerRadius) {
-        textFadeOpacity = minOpacityNearText;
-      } else if (distToText >= outerRadius) {
-        textFadeOpacity = baseOpacity;
-      } else {
-        const t = (distToText - innerRadius) / (outerRadius - innerRadius);
-        textFadeOpacity = minOpacityNearText + (baseOpacity - minOpacityNearText) * t;
-      }
-
-      // Mouse-based hover
-      let mouseBoost = 0;
-      if (highlightMode === 'background' || highlightMode === 'all') {
-        const textFadeInfluence = outerRadius > 0 
-          ? Math.min(1, distToText / outerRadius) 
-          : 1;
-        
-        const mouseX = mousePosRef.current.x;
-        const mouseY = mousePosRef.current.y;
-
-        const closestX = Math.max(rect.left, Math.min(mouseX, rect.right));
-        const closestY = Math.max(rect.top, Math.min(mouseY, rect.bottom));
-        const mouseDx = mouseX - closestX;
-        const mouseDy = mouseY - closestY;
-        const distToMouse = Math.sqrt(mouseDx * mouseDx + mouseDy * mouseDy);
-
-        const mouseInfluenceRadius = 220;
-
-        if (distToMouse < mouseInfluenceRadius) {
-          // Use easeOutCubic for smoother falloff
-          const normalizedDist = distToMouse / mouseInfluenceRadius;
-          const m = 1 - normalizedDist * normalizedDist * normalizedDist;
-          mouseBoost = m * 0.55 * textFadeInfluence;
-        }
-      }
-
-      return Math.max(minOpacityNearText, Math.min(1.0, textFadeOpacity + mouseBoost));
-    };
-
-    animateRef.current = () => {
-      if (!isInViewRef.current || document.hidden) {
-        stopAnimation();
-        return;
-      }
-
-      const spans = scrollContainerRef.current?.querySelectorAll<HTMLElement>('[data-tech-span="true"]');
-      if (!spans) {
-        stopAnimation();
-        return;
-      }
-
-      spans.forEach((el) => {
-        const targetOpacity = calculateTargetOpacity(el);
-        const currentOpacity = opacityMapRef.current.get(el) ?? targetOpacity;
-        
-        // Lerp factor controls smoothness (lower = smoother but slower)
-        // 0.08-0.12 is a good range for smooth transitions
-        const lerpFactor = 0.1;
-        const newOpacity = lerp(currentOpacity, targetOpacity, lerpFactor);
-        
-        opacityMapRef.current.set(el, newOpacity);
-        el.style.opacity = String(newOpacity);
-      });
-
-      queueAnimationFrame();
-    };
-
-    startAnimation();
-
-    return () => {
-      stopAnimation();
-    };
-  }, [textRect, highlightMode, startAnimation, stopAnimation, queueAnimationFrame]);
+  const highlightClass =
+    highlightMode === 'skills'
+      ? 'highlight-skills'
+      : highlightMode === 'interests'
+        ? 'highlight-interests'
+        : '';
 
   return (
     <section id="about" ref={sectionRef} className="min-h-screen relative pointer-events-auto overflow-hidden">
@@ -366,7 +176,7 @@ export default function AboutSection() {
       {/* Scrolling background text with per-span fade */}
       <div
         ref={scrollContainerRef}
-        className={`absolute inset-0 flex flex-col justify-around transition-opacity duration-1000 ${
+        className={`absolute inset-0 flex flex-col justify-around transition-opacity duration-1000 ${highlightClass} ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
         style={{
@@ -394,7 +204,11 @@ export default function AboutSection() {
                     data-tech-span="true"
                     data-category={tech.category}
                     className="text-5xl md:text-7xl lg:text-8xl font-light text-violet-500 mx-6 md:mx-10"
-                    style={{ fontFamily: "'Playfair Display', serif" }}
+                    style={{
+                      fontFamily: "'Playfair Display', serif",
+                      opacity: getSpanOpacity(tech.category),
+                      transition: 'opacity 0.5s ease',
+                    }}
                   >
                     {tech.text}
                   </span>
@@ -412,7 +226,11 @@ export default function AboutSection() {
                     data-tech-span="true"
                     data-category={tech.category}
                     className="text-5xl md:text-7xl lg:text-8xl font-light text-violet-500 mx-6 md:mx-10"
-                    style={{ fontFamily: "'Playfair Display', serif" }}
+                    style={{
+                      fontFamily: "'Playfair Display', serif",
+                      opacity: getSpanOpacity(tech.category),
+                      transition: 'opacity 0.5s ease',
+                    }}
                   >
                     {tech.text}
                   </span>
@@ -422,6 +240,18 @@ export default function AboutSection() {
           );
         })}
       </div>
+      <div
+        ref={spotlightRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          zIndex: 1,
+          background:
+            'radial-gradient(circle 250px at var(--spotlight-x, 50%) var(--spotlight-y, 50%), rgba(139,92,246,0.4) 0%, transparent 100%)',
+          mixBlendMode: 'lighten',
+          opacity: 0,
+          transition: 'opacity 0.3s ease',
+        }}
+      />
 
       {/* Foreground content */}
       <div className="relative min-h-screen flex flex-col" style={{ zIndex: 10 }}>
@@ -452,7 +282,7 @@ export default function AboutSection() {
           <div className="max-w-6xl mx-auto px-6 md:px-16 w-full">
             <div className="grid md:grid-cols-3 gap-12 md:gap-24">
               <div />
-              <div ref={textContentRef} data-about-text="true" className={`md:col-span-2 space-y-16 transition-opacity duration-500 ${
+              <div data-about-text="true" className={`md:col-span-2 space-y-16 transition-opacity duration-500 ${
                 highlightMode === 'skills' || highlightMode === 'interests' ? 'opacity-0 pointer-events-none' : 'opacity-100'
               }`}>
                 <h2
