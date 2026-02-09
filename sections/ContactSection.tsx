@@ -55,12 +55,14 @@ interface FormData {
 
 export default function ContactSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const splineContainerRef = useRef<HTMLDivElement>(null);
   const splineRef = useRef<Application | null>(null);
+  const isVisibleRef = useRef(false);
+  const frameRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number | null>(null);
+  const timeRef = useRef(0);
   const [isVisible, setIsVisible] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [splineLoaded, setSplineLoaded] = useState(false);
-  const [time, setTime] = useState(0);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -72,39 +74,146 @@ export default function ContactSection() {
   const particleConfigRef = useRef<ParticleConfig[]>(createParticleConfig());
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    const linkDistanceSq = PARTICLE_LINK_DISTANCE * PARTICLE_LINK_DISTANCE;
+    const particles = particleConfigRef.current.map((p) => ({
+      x: 0,
+      y: 0,
+      size: p.size,
+    }));
 
-  useEffect(() => {
+    const stopAnimation = () => {
+      if (frameRef.current === null) return;
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+      lastTimeRef.current = null;
+    };
+
+    const animate = (timestamp: number) => {
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+
+      if (!canvas || !ctx || !isVisibleRef.current || document.hidden) {
+        frameRef.current = null;
+        lastTimeRef.current = null;
+        return;
+      }
+
+      const previousTime = lastTimeRef.current;
+      const dt =
+        previousTime === null ? 0.016 : Math.min(0.05, (timestamp - previousTime) / 1000 || 0.016);
+      lastTimeRef.current = timestamp;
+      timeRef.current += dt;
+
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (w <= 0 || h <= 0) {
+        frameRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      const dpr = window.devicePixelRatio || 1;
+      const scaledWidth = Math.floor(w * dpr);
+      const scaledHeight = Math.floor(h * dpr);
+      if (canvas.width !== scaledWidth || canvas.height !== scaledHeight) {
+        canvas.width = scaledWidth;
+        canvas.height = scaledHeight;
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const centerX = w / 2;
+      const centerY = h / 2;
+      for (let idx = 0; idx < particleConfigRef.current.length; idx++) {
+        const p = particleConfigRef.current[idx];
+        const particle = particles[idx];
+        const baseX = (p.uX - 0.5) * w;
+        const baseY = (p.uY - 0.5) * h;
+        particle.x = centerX + baseX + Math.sin(timeRef.current * p.speed + idx) * p.ampX;
+        particle.y = centerY + baseY + Math.cos(timeRef.current * p.speed + idx) * p.ampY;
+      }
+
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = '#a855f7';
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 1.5;
+
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const a = particles[i];
+          const b = particles[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq >= linkDistanceSq) continue;
+          const dist = Math.sqrt(distSq);
+          const t = 1 - dist / PARTICLE_LINK_DISTANCE;
+          ctx.globalAlpha = Math.pow(t, 1.5) * 0.5;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+
+      ctx.fillStyle = '#a855f7';
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      for (const p of particles) {
+        ctx.moveTo(p.x + p.size, p.y);
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      }
+      ctx.fill();
+
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      frameRef.current = requestAnimationFrame(animate);
+    };
+
+    const startAnimation = () => {
+      if (frameRef.current !== null) return;
+      lastTimeRef.current = null;
+      frameRef.current = requestAnimationFrame(animate);
+    };
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true);
+        isVisibleRef.current = entry.isIntersecting;
+        if (entry.isIntersecting) {
+          setIsVisible((prev) => (prev ? prev : true));
+          if (!document.hidden) startAnimation();
+        } else {
+          stopAnimation();
+        }
       },
       { threshold: 0.2 }
     );
-    if (sectionRef.current) observer.observe(sectionRef.current);
-    return () => observer.disconnect();
-  }, []);
 
-  useEffect(() => {
-    if (!isVisible) return;
-    let frame: number;
-    let lastTime = performance.now();
-
-    const animate = (timestamp: number) => {
-      const dt = Math.min(0.05, (timestamp - lastTime) / 1000 || 0.016);
-      lastTime = timestamp;
-      setTime((t) => t + dt);
-      frame = requestAnimationFrame(animate);
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopAnimation();
+        return;
+      }
+      if (isVisibleRef.current) {
+        startAnimation();
+      }
     };
 
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [isVisible]);
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopAnimation();
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const handleSplineLoad = useCallback((spline: Application) => {
     splineRef.current = spline;
-    setSplineLoaded(true);
+    if (splineContainerRef.current) {
+      splineContainerRef.current.classList.remove('opacity-0');
+      splineContainerRef.current.classList.add('opacity-100');
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,22 +258,6 @@ export default function ContactSection() {
     });
   };
 
-  const particleLayout = (() => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    const width = rect?.width ?? 1200;
-    const height = rect?.height ?? 1200;
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    return particleConfigRef.current.map((p, idx) => {
-      const baseX = (p.uX - 0.5) * width;
-      const baseY = (p.uY - 0.5) * height;
-      const x = centerX + baseX + Math.sin(time * p.speed + idx) * p.ampX;
-      const y = centerY + baseY + Math.cos(time * p.speed + idx) * p.ampY;
-      return { x, y, size: p.size };
-    });
-  })();
-
   return (
     <section
       id="contact"
@@ -192,24 +285,21 @@ export default function ContactSection() {
         </div>
 
         {/* Spline 3D Scene - this needs pointer events */}
-        {mounted && (
-          <div
-            className={`absolute inset-0 transition-opacity duration-1000 ${
-              splineLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <Spline
-              scene="https://prod.spline.design/MZq7kXo79Cm3jRXM/scene.splinecode"
-              onLoad={handleSplineLoad}
-              style={{
-                width: '100%',
-                height: '100%',
-                position: 'absolute',
-              }}
-              renderOnDemand={false}
-            />
-          </div>
-        )}
+        <div
+          ref={splineContainerRef}
+          className="absolute inset-0 transition-opacity duration-1000 opacity-0"
+        >
+          <Spline
+            scene="https://prod.spline.design/MZq7kXo79Cm3jRXM/scene.splinecode"
+            onLoad={handleSplineLoad}
+            style={{
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+            }}
+            renderOnDemand={true}
+          />
+        </div>
       </div>
 
       {/* Layer 2: Heavy blur overlay - NO pointer events */}
@@ -225,82 +315,10 @@ export default function ContactSection() {
 
       {/* Layer 3: Particles - NO pointer events */}
       <div 
-        ref={containerRef} 
         className="absolute inset-0 pointer-events-none" 
         style={{ zIndex: 3 }}
       >
-        <svg className="absolute inset-0 w-full h-full" style={{ filter: 'blur(0.5px)' }}>
-          <defs>
-            <linearGradient id="particle-line-contact" x1="0%" x2="100%" y1="0%" y2="0%">
-              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#ec4899" stopOpacity="0.6" />
-            </linearGradient>
-            <filter id="particle-glow">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          {(() => {
-            const lines: Array<{
-              x1: number;
-              y1: number;
-              x2: number;
-              y2: number;
-              opacity: number;
-            }> = [];
-
-            for (let i = 0; i < particleLayout.length; i++) {
-              for (let j = i + 1; j < particleLayout.length; j++) {
-                const a = particleLayout[i];
-                const b = particleLayout[j];
-                const dx = a.x - b.x;
-                const dy = a.y - b.y;
-                const dist = Math.hypot(dx, dy);
-                if (dist > PARTICLE_LINK_DISTANCE) continue;
-                const t = 1 - dist / PARTICLE_LINK_DISTANCE;
-                lines.push({
-                  x1: a.x,
-                  y1: a.y,
-                  x2: b.x,
-                  y2: b.y,
-                  opacity: Math.pow(t, 1.5) * 0.5,
-                });
-              }
-            }
-
-            return (
-              <>
-                {lines.map((line, idx) => (
-                  <line
-                    key={`line-${idx}`}
-                    x1={line.x1}
-                    y1={line.y1}
-                    x2={line.x2}
-                    y2={line.y2}
-                    stroke="url(#particle-line-contact)"
-                    strokeWidth={1.5}
-                    opacity={line.opacity}
-                    filter="url(#particle-glow)"
-                  />
-                ))}
-                {particleLayout.map((p, idx) => (
-                  <circle
-                    key={`particle-${idx}`}
-                    cx={p.x}
-                    cy={p.y}
-                    r={p.size}
-                    fill="#a855f7"
-                    fillOpacity={0.7}
-                    filter="url(#particle-glow)"
-                  />
-                ))}
-              </>
-            );
-          })()}
-        </svg>
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
       </div>
 
       {/* Layer 4: Content - NO pointer events on wrapper, YES on interactive children */}

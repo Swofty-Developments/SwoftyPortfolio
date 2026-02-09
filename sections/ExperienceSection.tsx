@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence, motionValue } from 'framer-motion';
 import type { ExperienceOrAward, Experience, Award } from '@/types/experience';
 
 type ParticleConfig = {
@@ -115,14 +115,18 @@ const createParticleConfig = (): ParticleConfig[] => {
 export default function ExperienceSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const topBorderRef = useRef<HTMLDivElement>(null);
+  const bottomBorderRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ExperienceOrAward | null>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [time, setTime] = useState(0);
-  const [cursorInside, setCursorInside] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'experience' | 'awards'>('all');
-  const [isGrabbing, setIsGrabbing] = useState(false);
-  const [, forceRender] = useState(0);
+  const timeRef = useRef(0);
+  const isVisibleRef = useRef(false);
+  const frameRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number | null>(null);
+  const isAnimatingRef = useRef(false);
+  const wasGrabbingRef = useRef(false);
 
   const mouseRef = useRef({ x: 0, y: 0, inside: false, grabbing: false });
   const lastHoveredRef = useRef({ index: -1, releaseTime: 0 });
@@ -223,6 +227,14 @@ export default function ExperienceSection() {
 
   const allItems: ExperienceOrAward[] = [...experiences, ...awards];
   const orbStatesRef = useRef<OrbState[]>(createOrbStates(allItems.length));
+  const orbMotion = useRef(
+    allItems.map(() => ({ x: motionValue(0), y: motionValue(0), rotate: motionValue(0) }))
+  ).current;
+  const filteredOrbIndexesRef = useRef<number[]>([]);
+  const itemTypeByIndexRef = useRef(allItems.map(item => item.type));
+  const itemIndexByIdRef = useRef(
+    new Map(allItems.map((item, index) => [item.id, index]))
+  );
   const orbStates = orbStatesRef.current;
 
   const filteredItems = filterType === 'all'
@@ -230,6 +242,20 @@ export default function ExperienceSection() {
     : allItems.filter(item =>
         filterType === 'experience' ? item.type === 'experience' : item.type === 'award'
       );
+
+  useEffect(() => {
+    filteredOrbIndexesRef.current = filteredItems.map(item =>
+      itemIndexByIdRef.current.get(item.id) ?? -1
+    );
+  }, [filteredItems]);
+
+  useEffect(() => {
+    for (let i = 0; i < orbStates.length; i++) {
+      orbMotion[i].x.set(orbStates[i].x);
+      orbMotion[i].y.set(orbStates[i].y);
+      orbMotion[i].rotate.set(Math.sin(timeRef.current + i * 1.15) * 14);
+    }
+  }, [orbMotion, orbStates]);
 
   useEffect(() => {
     const handleResetOrbs = () => {
@@ -266,6 +292,9 @@ export default function ExperienceSection() {
         orbStates[i].y = newPos.y;
         orbStates[i].vx = 0;
         orbStates[i].vy = 0;
+        orbMotion[i].x.set(newPos.x);
+        orbMotion[i].y.set(newPos.y);
+        orbMotion[i].rotate.set(Math.sin(timeRef.current + i * 1.15) * 14);
       }
     };
 
@@ -281,228 +310,21 @@ export default function ExperienceSection() {
       window.removeEventListener('resetOrbs', handleResetOrbs);
       window.removeEventListener('filterExperience', handleFilterExperience as EventListener);
     };
-  }, [orbStates]);
+  }, [orbMotion, orbStates]);
 
-  useEffect(() => {
-    mouseRef.current = { x: mousePos.x, y: mousePos.y, inside: cursorInside, grabbing: isGrabbing };
-  }, [mousePos, cursorInside, isGrabbing]);
+  const updateBorderOpacities = useCallback((
+    halfHeight: number,
+    mouse: { x: number; y: number; inside: boolean; grabbing: boolean }
+  ) => {
+    const topBorder = topBorderRef.current;
+    const bottomBorder = bottomBorderRef.current;
+    if (!topBorder || !bottomBorder) return;
 
-  useEffect(() => {
-    if (!isVisible) return;
-    let frame: number;
-    let lastTime = performance.now();
-
-    let wasGrabbing = false;
-    
-    const animate = (timestamp: number) => {
-      const dt = Math.min(0.05, (timestamp - lastTime) / 1000 || 0.016);
-      lastTime = timestamp;
-      setTime((t) => t + dt);
-
-      const mouse = mouseRef.current;
-      const now = performance.now();
-
-      // Track grab release for momentum preservation
-      if (wasGrabbing && !mouse.grabbing) {
-        grabReleaseTimeRef.current = now;
-      }
-      wasGrabbing = mouse.grabbing;
-      
-      const timeSinceGrabRelease = now - grabReleaseTimeRef.current;
-      const isInPostGrabMomentum = timeSinceGrabRelease < POST_GRAB_MOMENTUM_MS && grabReleaseTimeRef.current > 0;
-
-      const rect = containerRef.current?.getBoundingClientRect();
-      const halfWidth = rect ? rect.width / 2 : 520;
-      const halfHeight = rect ? rect.height / 2 : 360;
-
-      let hoveredIndex = -1;
-      if (mouse.inside) {
-        let closestDist = Infinity;
-        for (let i = 0; i < orbStates.length; i++) {
-          const orb = orbStates[i];
-          const dx = mouse.x - orb.x;
-          const dy = mouse.y - orb.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < HOVER_RADIUS && dist < closestDist) {
-            closestDist = dist;
-            hoveredIndex = i;
-          }
-        }
-      }
-
-      const lastHovered = lastHoveredRef.current;
-      if (lastHovered.index !== -1 && hoveredIndex !== lastHovered.index) {
-        if (lastHovered.releaseTime === 0) {
-          lastHovered.releaseTime = now;
-        }
-      }
-
-      if (hoveredIndex !== -1) {
-        lastHovered.index = hoveredIndex;
-        lastHovered.releaseTime = 0;
-      }
-
-      const recentlyReleasedIndex = (lastHovered.releaseTime > 0 &&
-        now - lastHovered.releaseTime < RELEASE_DELAY_MS)
-        ? lastHovered.index
-        : -1;
-
-      if (lastHovered.releaseTime > 0 && now - lastHovered.releaseTime >= RELEASE_DELAY_MS) {
-        lastHovered.index = -1;
-        lastHovered.releaseTime = 0;
-      }
-
-      for (let i = 0; i < orbStates.length; i++) {
-        const orb = orbStates[i];
-        const isHovered = i === hoveredIndex;
-        const isRecentlyReleased = i === recentlyReleasedIndex;
-
-        // When grabbing, don't freeze hovered orb - let it be thrown
-        if (!mouse.grabbing && (isHovered || isRecentlyReleased)) {
-          orb.vx *= 0.8;
-          orb.vy *= 0.8;
-          continue;
-        }
-
-        let fx = 0;
-        let fy = 0;
-
-        const dx = mouse.x - orb.x;
-        const dy = mouse.y - orb.y;
-        const distSq = dx * dx + dy * dy;
-        const dist = Math.sqrt(distSq);
-
-        if (mouse.inside && dist > 1) {
-          const jitter = 0.9 + noise(orb.x, orb.y, now * 0.001) * 0.2;
-          
-          // Use much stronger grab force when clicking
-          const strength = mouse.grabbing ? GRAB_STRENGTH : ATTRACTION_STRENGTH;
-          const force = strength * distSq * jitter;
-
-          fx += (dx / dist) * force;
-          fy += (dy / dist) * force;
-        }
-
-        const t = now * orb.driftSpeed;
-        const noiseX = noise(orb.x + 1000, orb.y, t + orb.driftPhase);
-        const noiseY = noise(orb.x, orb.y + 1000, t + orb.driftPhase + 50);
-        fx += noiseX * IDLE_DRIFT_STRENGTH;
-        fy += noiseY * IDLE_DRIFT_STRENGTH;
-
-        for (let j = 0; j < orbStates.length; j++) {
-          if (i === j) continue;
-          const other = orbStates[j];
-          const rdx = orb.x - other.x;
-          const rdy = orb.y - other.y;
-          const rDistSq = rdx * rdx + rdy * rdy;
-          const rDist = Math.sqrt(rDistSq);
-
-          if (rDist < REPULSION_RADIUS && rDist > 1) {
-            const overlap = REPULSION_RADIUS - rDist;
-            const softness = overlap / REPULSION_RADIUS;
-            const force = REPULSION_STRENGTH * softness * softness * 0.01;
-
-            const tangentX = -rdy / rDist;
-            const tangentY = rdx / rDist;
-            const swirl = noise(orb.x + other.x, orb.y + other.y, now * 0.0005) * 0.3;
-
-            fx += (rdx / rDist) * force + tangentX * force * swirl;
-            fy += (rdy / rDist) * force + tangentY * force * swirl;
-          }
-        }
-
-        const ax = fx / orb.mass;
-        const ay = fy / orb.mass;
-
-        // Use much less damping right after releasing grab to preserve momentum
-        const currentDamping = isInPostGrabMomentum ? POST_GRAB_DAMPING : DAMPING;
-        orb.vx = (orb.vx + ax) * currentDamping;
-        orb.vy = (orb.vy + ay) * currentDamping;
-
-        const speed = Math.sqrt(orb.vx * orb.vx + orb.vy * orb.vy);
-        if (speed < MIN_VELOCITY_THRESHOLD && !isInPostGrabMomentum) {
-          orb.vx *= 0.5;
-          orb.vy *= 0.5;
-        }
-
-        // Allow higher velocity when grabbing or in post-grab momentum for throwing effect
-        const maxVel = (mouse.grabbing || isInPostGrabMomentum) ? GRAB_MAX_VELOCITY : MAX_VELOCITY;
-        if (speed > maxVel) {
-          orb.vx = (orb.vx / speed) * maxVel;
-          orb.vy = (orb.vy / speed) * maxVel;
-        }
-
-        orb.x += orb.vx;
-        orb.y += orb.vy;
-
-        const minX = -halfWidth + ORB_RADIUS;
-        const maxX = halfWidth - ORB_RADIUS;
-        const minY = -halfHeight + ORB_RADIUS;
-        const maxY = halfHeight - ORB_RADIUS;
-
-        if (orb.x < minX) {
-          orb.x = minX;
-          orb.vx *= -0.5;
-        } else if (orb.x > maxX) {
-          orb.x = maxX;
-          orb.vx *= -0.5;
-        }
-
-        if (orb.y < minY) {
-          orb.y = minY;
-          orb.vy *= -0.5;
-        } else if (orb.y > maxY) {
-          orb.y = maxY;
-          orb.vy *= -0.5;
-        }
-      }
-
-      forceRender(n => n + 1);
-      frame = requestAnimationFrame(animate);
-    };
-
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [isVisible, orbStates]);
-
-  useEffect(() => {
-    const handleMove = (e: MouseEvent) => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const inside =
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom;
-      if (!inside) {
-        if (cursorInside) setCursorInside(false);
-        return;
-      }
-      if (!cursorInside) setCursorInside(true);
-      setMousePos({
-        x: e.clientX - rect.left - rect.width / 2,
-        y: e.clientY - rect.top - rect.height / 2,
-      });
-    };
-    window.addEventListener('mousemove', handleMove);
-    return () => window.removeEventListener('mousemove', handleMove);
-  }, [cursorInside]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true);
-      },
-      { threshold: 0.2 }
-    );
-    if (sectionRef.current) observer.observe(sectionRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const borderOpacities = (() => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return { top: 0, bottom: 0 };
-    const halfHeight = rect.height / 2;
+    if (!isVisibleRef.current) {
+      topBorder.style.opacity = '0';
+      bottomBorder.style.opacity = '0';
+      return;
+    }
 
     let minTop = Infinity;
     let minBottom = Infinity;
@@ -514,33 +336,393 @@ export default function ExperienceSection() {
       if (distBottom >= 0 && distBottom < minBottom) minBottom = distBottom;
     }
 
-    const cursorTop = mousePos.y + halfHeight;
-    const cursorBottom = halfHeight - mousePos.y;
-    if (cursorTop >= 0 && cursorTop < minTop) minTop = cursorTop;
-    if (cursorBottom >= 0 && cursorBottom < minBottom) minBottom = cursorBottom;
+    if (mouse.inside) {
+      const cursorTop = mouse.y + halfHeight;
+      const cursorBottom = halfHeight - mouse.y;
+      if (cursorTop >= 0 && cursorTop < minTop) minTop = cursorTop;
+      if (cursorBottom >= 0 && cursorBottom < minBottom) minBottom = cursorBottom;
+    }
 
     const MAX_DIST = 200;
     const topT = Math.max(0, Math.min(1, 1 - minTop / MAX_DIST));
     const bottomT = Math.max(0, Math.min(1, 1 - minBottom / MAX_DIST));
 
-    return { top: topT * topT, bottom: bottomT * bottomT };
-  })();
+    topBorder.style.opacity = `${topT * topT}`;
+    bottomBorder.style.opacity = `${bottomT * bottomT}`;
+  }, [orbStates]);
 
-  const particleLayout = (() => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    const width = rect?.width ?? 1200;
-    const height = rect?.height ?? 700;
+  const drawCanvas = useCallback((
+    rect: DOMRect,
+    mouse: { x: number; y: number; inside: boolean; grabbing: boolean }
+  ) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = rect.width;
+    const height = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+    const canvasWidth = Math.floor(width * dpr);
+    const canvasHeight = Math.floor(height * dpr);
+
+    if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+    }
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    if (!isVisibleRef.current) return;
+
     const centerX = width / 2;
     const centerY = height / 2;
-
-    return particleConfigRef.current.map((p, idx) => {
+    const particleLayout = particleConfigRef.current.map((p, idx) => {
       const baseX = (p.uX - 0.5) * width;
       const baseY = (p.uY - 0.5) * height;
-      const x = centerX + baseX + Math.sin(time * p.speed + idx) * p.ampX;
-      const y = centerY + baseY + Math.cos(time * p.speed + idx) * p.ampY;
+      const x = centerX + baseX + Math.sin(timeRef.current * p.speed + idx) * p.ampX;
+      const y = centerY + baseY + Math.cos(timeRef.current * p.speed + idx) * p.ampY;
       return { x, y, size: p.size };
     });
-  })();
+
+    const particleGradient = ctx.createLinearGradient(0, 0, width, 0);
+    particleGradient.addColorStop(0, 'rgba(168,85,247,0.4)');
+    particleGradient.addColorStop(1, 'rgba(236,72,153,0.4)');
+    ctx.strokeStyle = particleGradient;
+    ctx.lineWidth = 1;
+    const linkDistanceSq = PARTICLE_LINK_DISTANCE * PARTICLE_LINK_DISTANCE;
+
+    for (let i = 0; i < particleLayout.length; i++) {
+      for (let j = i + 1; j < particleLayout.length; j++) {
+        const a = particleLayout[i];
+        const b = particleLayout[j];
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq > linkDistanceSq) continue;
+        const dist = Math.sqrt(distSq);
+        const t = 1 - dist / PARTICLE_LINK_DISTANCE;
+        ctx.globalAlpha = Math.pow(t, 1.5) * 0.35;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(168,85,247,0.4)';
+    ctx.beginPath();
+    for (const particle of particleLayout) {
+      ctx.moveTo(particle.x + particle.size, particle.y);
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    if (!mouse.inside) return;
+
+    ctx.save();
+    ctx.setLineDash(mouse.grabbing ? [8, 4] : [5, 5]);
+    ctx.lineCap = 'round';
+    for (const orbIndex of filteredOrbIndexesRef.current) {
+      if (orbIndex < 0) continue;
+      const orb = orbStates[orbIndex];
+      const isExperience = itemTypeByIndexRef.current[orbIndex] === 'experience';
+      const lineColor = isExperience ? '#a855f7' : '#ec4899';
+
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = mouse.grabbing ? 4 : 2;
+      ctx.globalAlpha = mouse.grabbing ? 0.9 : 0.6;
+      ctx.shadowBlur = mouse.grabbing ? 6 : 0;
+      ctx.shadowColor = lineColor;
+      ctx.beginPath();
+      ctx.moveTo(centerX + mouse.x, centerY + mouse.y);
+      ctx.lineTo(centerX + orb.x, centerY + orb.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }, [orbStates]);
+
+  const animate = useCallback((timestamp: number) => {
+      if (!isAnimatingRef.current) return;
+
+      const previousTime = lastTimeRef.current;
+      const dt = previousTime === null
+        ? 0.016
+        : Math.min(0.05, (timestamp - previousTime) / 1000 || 0.016);
+      lastTimeRef.current = timestamp;
+      timeRef.current += dt;
+
+      const mouse = mouseRef.current;
+      const now = performance.now();
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) {
+        if (isAnimatingRef.current) {
+          frameRef.current = requestAnimationFrame(animate);
+        }
+        return;
+      }
+      const halfWidth = rect.width / 2;
+      const halfHeight = rect.height / 2;
+
+      // Track grab release for momentum preservation
+      if (wasGrabbingRef.current && !mouse.grabbing) {
+        grabReleaseTimeRef.current = now;
+      }
+      wasGrabbingRef.current = mouse.grabbing;
+      if (isVisibleRef.current) {
+        const timeSinceGrabRelease = now - grabReleaseTimeRef.current;
+        const isInPostGrabMomentum = timeSinceGrabRelease < POST_GRAB_MOMENTUM_MS && grabReleaseTimeRef.current > 0;
+
+        let hoveredIndex = -1;
+        if (mouse.inside) {
+          let closestDist = Infinity;
+          for (let i = 0; i < orbStates.length; i++) {
+            const orb = orbStates[i];
+            const dx = mouse.x - orb.x;
+            const dy = mouse.y - orb.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < HOVER_RADIUS && dist < closestDist) {
+              closestDist = dist;
+              hoveredIndex = i;
+            }
+          }
+        }
+
+        const lastHovered = lastHoveredRef.current;
+        if (lastHovered.index !== -1 && hoveredIndex !== lastHovered.index) {
+          if (lastHovered.releaseTime === 0) {
+            lastHovered.releaseTime = now;
+          }
+        }
+
+        if (hoveredIndex !== -1) {
+          lastHovered.index = hoveredIndex;
+          lastHovered.releaseTime = 0;
+        }
+
+        const recentlyReleasedIndex = (lastHovered.releaseTime > 0 &&
+          now - lastHovered.releaseTime < RELEASE_DELAY_MS)
+          ? lastHovered.index
+          : -1;
+
+        if (lastHovered.releaseTime > 0 && now - lastHovered.releaseTime >= RELEASE_DELAY_MS) {
+          lastHovered.index = -1;
+          lastHovered.releaseTime = 0;
+        }
+
+        for (let i = 0; i < orbStates.length; i++) {
+          const orb = orbStates[i];
+          const isHovered = i === hoveredIndex;
+          const isRecentlyReleased = i === recentlyReleasedIndex;
+
+          // When grabbing, don't freeze hovered orb - let it be thrown
+          if (!mouse.grabbing && (isHovered || isRecentlyReleased)) {
+            orb.vx *= 0.8;
+            orb.vy *= 0.8;
+            continue;
+          }
+
+          let fx = 0;
+          let fy = 0;
+
+          const dx = mouse.x - orb.x;
+          const dy = mouse.y - orb.y;
+          const distSq = dx * dx + dy * dy;
+          const dist = Math.sqrt(distSq);
+
+          if (mouse.inside && dist > 1) {
+            const jitter = 0.9 + noise(orb.x, orb.y, now * 0.001) * 0.2;
+
+            // Use much stronger grab force when clicking
+            const strength = mouse.grabbing ? GRAB_STRENGTH : ATTRACTION_STRENGTH;
+            const force = strength * distSq * jitter;
+
+            fx += (dx / dist) * force;
+            fy += (dy / dist) * force;
+          }
+
+          const t = now * orb.driftSpeed;
+          const noiseX = noise(orb.x + 1000, orb.y, t + orb.driftPhase);
+          const noiseY = noise(orb.x, orb.y + 1000, t + orb.driftPhase + 50);
+          fx += noiseX * IDLE_DRIFT_STRENGTH;
+          fy += noiseY * IDLE_DRIFT_STRENGTH;
+
+          for (let j = 0; j < orbStates.length; j++) {
+            if (i === j) continue;
+            const other = orbStates[j];
+            const rdx = orb.x - other.x;
+            const rdy = orb.y - other.y;
+            const rDistSq = rdx * rdx + rdy * rdy;
+            const rDist = Math.sqrt(rDistSq);
+
+            if (rDist < REPULSION_RADIUS && rDist > 1) {
+              const overlap = REPULSION_RADIUS - rDist;
+              const softness = overlap / REPULSION_RADIUS;
+              const force = REPULSION_STRENGTH * softness * softness * 0.01;
+
+              const tangentX = -rdy / rDist;
+              const tangentY = rdx / rDist;
+              const swirl = noise(orb.x + other.x, orb.y + other.y, now * 0.0005) * 0.3;
+
+              fx += (rdx / rDist) * force + tangentX * force * swirl;
+              fy += (rdy / rDist) * force + tangentY * force * swirl;
+            }
+          }
+
+          const ax = fx / orb.mass;
+          const ay = fy / orb.mass;
+
+          // Use much less damping right after releasing grab to preserve momentum
+          const currentDamping = isInPostGrabMomentum ? POST_GRAB_DAMPING : DAMPING;
+          orb.vx = (orb.vx + ax) * currentDamping;
+          orb.vy = (orb.vy + ay) * currentDamping;
+
+          const speed = Math.sqrt(orb.vx * orb.vx + orb.vy * orb.vy);
+          if (speed < MIN_VELOCITY_THRESHOLD && !isInPostGrabMomentum) {
+            orb.vx *= 0.5;
+            orb.vy *= 0.5;
+          }
+
+          // Allow higher velocity when grabbing or in post-grab momentum for throwing effect
+          const maxVel = (mouse.grabbing || isInPostGrabMomentum) ? GRAB_MAX_VELOCITY : MAX_VELOCITY;
+          if (speed > maxVel) {
+            orb.vx = (orb.vx / speed) * maxVel;
+            orb.vy = (orb.vy / speed) * maxVel;
+          }
+
+          orb.x += orb.vx;
+          orb.y += orb.vy;
+
+          const minX = -halfWidth + ORB_RADIUS;
+          const maxX = halfWidth - ORB_RADIUS;
+          const minY = -halfHeight + ORB_RADIUS;
+          const maxY = halfHeight - ORB_RADIUS;
+
+          if (orb.x < minX) {
+            orb.x = minX;
+            orb.vx *= -0.5;
+          } else if (orb.x > maxX) {
+            orb.x = maxX;
+            orb.vx *= -0.5;
+          }
+
+          if (orb.y < minY) {
+            orb.y = minY;
+            orb.vy *= -0.5;
+          } else if (orb.y > maxY) {
+            orb.y = maxY;
+            orb.vy *= -0.5;
+          }
+        }
+      }
+
+      for (let i = 0; i < orbStates.length; i++) {
+        orbMotion[i].x.set(orbStates[i].x);
+        orbMotion[i].y.set(orbStates[i].y);
+        orbMotion[i].rotate.set(Math.sin(timeRef.current + i * 1.15) * 14);
+      }
+
+      updateBorderOpacities(halfHeight, mouse);
+      drawCanvas(rect, mouse);
+      if (isAnimatingRef.current) {
+        frameRef.current = requestAnimationFrame(animate);
+      }
+    }, [drawCanvas, orbMotion, orbStates, updateBorderOpacities]);
+
+  const stopAnimation = useCallback(() => {
+    if (!isAnimatingRef.current) return;
+    isAnimatingRef.current = false;
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    lastTimeRef.current = null;
+  }, []);
+
+  const startAnimation = useCallback(() => {
+    if (isAnimatingRef.current) return;
+    isAnimatingRef.current = true;
+    lastTimeRef.current = null;
+    wasGrabbingRef.current = mouseRef.current.grabbing;
+    frameRef.current = requestAnimationFrame(animate);
+  }, [animate]);
+
+  useEffect(() => {
+    return () => {
+      stopAnimation();
+    };
+  }, [stopAnimation]);
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const inside =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+
+      mouseRef.current = {
+        x: e.clientX - rect.left - rect.width / 2,
+        y: e.clientY - rect.top - rect.height / 2,
+        inside,
+        grabbing: mouseRef.current.grabbing,
+      };
+    };
+    window.addEventListener('mousemove', handleMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMove);
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const isIntersecting = entry.isIntersecting;
+        isVisibleRef.current = isIntersecting;
+        setIsVisible(isIntersecting);
+
+        if (isIntersecting && !document.hidden) {
+          startAnimation();
+        } else {
+          stopAnimation();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, [startAnimation, stopAnimation]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopAnimation();
+        return;
+      }
+
+      if (isVisibleRef.current) {
+        startAnimation();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [startAnimation, stopAnimation]);
+
+  useEffect(() => {
+    const handleMouseUp = () => {
+      mouseRef.current = { ...mouseRef.current, grabbing: false };
+      containerRef.current?.classList.remove('cursor-grabbing');
+    };
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, []);
 
   return (
     <section
@@ -593,127 +775,39 @@ export default function ExperienceSection() {
       <div className="relative z-10 pointer-events-auto">
         <div
           ref={containerRef}
-          className={`relative w-full h-[720px] pointer-events-auto ${isGrabbing ? 'cursor-grabbing' : 'cursor-default'}`}
+          className="relative w-full h-[720px] pointer-events-auto cursor-default"
           onMouseDown={(e) => {
             if (e.button === 0) {
-              setIsGrabbing(true);
+              mouseRef.current = { ...mouseRef.current, grabbing: true };
+              containerRef.current?.classList.add('cursor-grabbing');
             }
           }}
-          onMouseUp={() => setIsGrabbing(false)}
-          onMouseLeave={() => setIsGrabbing(false)}
+          onMouseUp={() => {
+            mouseRef.current = { ...mouseRef.current, grabbing: false };
+            containerRef.current?.classList.remove('cursor-grabbing');
+          }}
+          onMouseLeave={() => {
+            mouseRef.current = { ...mouseRef.current, grabbing: false, inside: false };
+            containerRef.current?.classList.remove('cursor-grabbing');
+          }}
         >
           <div className="relative w-full h-full flex items-center justify-center">
+            <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }} />
             <div
+              ref={topBorderRef}
               className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-violet-500/80 to-transparent"
-              style={{ opacity: borderOpacities.top }}
+              style={{ opacity: 0 }}
             />
             <div
+              ref={bottomBorderRef}
               className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-violet-500/80 to-transparent"
-              style={{ opacity: borderOpacities.bottom }}
+              style={{ opacity: 0 }}
             />
-
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-              {(() => {
-                const lines: Array<{
-                  x1: number;
-                  y1: number;
-                  x2: number;
-                  y2: number;
-                  opacity: number;
-                }> = [];
-
-                for (let i = 0; i < particleLayout.length; i++) {
-                  for (let j = i + 1; j < particleLayout.length; j++) {
-                    const a = particleLayout[i];
-                    const b = particleLayout[j];
-                    const dx = a.x - b.x;
-                    const dy = a.y - b.y;
-                    const dist = Math.hypot(dx, dy);
-                    if (dist > PARTICLE_LINK_DISTANCE) continue;
-                    const t = 1 - dist / PARTICLE_LINK_DISTANCE;
-                    lines.push({
-                      x1: a.x,
-                      y1: a.y,
-                      x2: b.x,
-                      y2: b.y,
-                      opacity: Math.pow(t, 1.5) * 0.35,
-                    });
-                  }
-                }
-
-                return (
-                  <>
-                    {lines.map((line, idx) => (
-                      <line
-                        key={`line-${idx}`}
-                        x1={line.x1}
-                        y1={line.y1}
-                        x2={line.x2}
-                        y2={line.y2}
-                        stroke="url(#particle-line)"
-                        strokeWidth={1}
-                        opacity={line.opacity}
-                      />
-                    ))}
-                    <defs>
-                      <linearGradient id="particle-line" x1="0%" x2="100%" y1="0%" y2="0%">
-                        <stop offset="0%" stopColor="#a855f7" stopOpacity="0.4" />
-                        <stop offset="100%" stopColor="#ec4899" stopOpacity="0.4" />
-                      </linearGradient>
-                    </defs>
-                    {particleLayout.map((p, idx) => (
-                      <circle
-                        key={`particle-${idx}`}
-                        cx={p.x}
-                        cy={p.y}
-                        r={p.size}
-                        fill="#a855f7"
-                        fillOpacity={0.4}
-                      />
-                    ))}
-                  </>
-                );
-              })()}
-            </svg>
-
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-              {isVisible &&
-                cursorInside &&
-                containerRef.current &&
-                filteredItems.map((item) => {
-                  const actualIndex = allItems.findIndex(i => i.id === item.id);
-                  const orb = orbStates[actualIndex];
-                  const isExperience = item.type === 'experience';
-                  const rect = containerRef.current?.getBoundingClientRect();
-                  if (!rect) return null;
-                  const svgCenterX = rect.width / 2;
-                  const svgCenterY = rect.height / 2;
-
-                  return (
-                    <line
-                      key={`line-${item.id}`}
-                      x1={svgCenterX + mousePos.x}
-                      y1={svgCenterY + mousePos.y}
-                      x2={svgCenterX + orb.x}
-                      y2={svgCenterY + orb.y}
-                      stroke={isExperience ? '#a855f7' : '#ec4899'}
-                      strokeWidth={isGrabbing ? 4 : 2}
-                      strokeDasharray={isGrabbing ? "8,4" : "5,5"}
-                      opacity={isGrabbing ? 0.9 : 0.6}
-                      style={{
-                        filter: isGrabbing ? 'drop-shadow(0 0 6px currentColor)' : 'none',
-                        transition: 'stroke-width 0.15s, opacity 0.15s',
-                      }}
-                    />
-                  );
-                })}
-            </svg>
 
             {filteredItems.map((item) => {
               const isExperience = item.type === 'experience';
-              const actualIndex = allItems.findIndex(i => i.id === item.id);
-              const orb = orbStates[actualIndex];
-              const tiltOffset = Math.sin(time + actualIndex * 1.15) * 14;
+              const actualIndex = itemIndexByIdRef.current.get(item.id) ?? -1;
+              if (actualIndex < 0) return null;
 
               return (
                 <motion.div
@@ -726,22 +820,19 @@ export default function ExperienceSection() {
                       ? {
                           opacity: 1,
                           scale: 1,
-                          x: orb.x,
-                          y: orb.y,
-                          rotate: tiltOffset,
                         }
                       : { opacity: 0, scale: 0.35 }
                   }
                   transition={{
                     opacity: { duration: 0.6, delay: actualIndex * 0.08 },
                     scale: { duration: 0.6, delay: actualIndex * 0.08, ease: 'easeOut' },
-                    x: { type: 'tween', ease: 'linear', duration: 0 },
-                    y: { type: 'tween', ease: 'linear', duration: 0 },
-                    rotate: { type: 'tween', ease: 'linear', duration: 0 },
                   }}
                   className="absolute left-1/2 top-1/2 cursor-pointer group pointer-events-auto"
                   onClick={() => setSelectedItem(item)}
                   style={{
+                    x: orbMotion[actualIndex].x,
+                    y: orbMotion[actualIndex].y,
+                    rotate: orbMotion[actualIndex].rotate,
                     willChange: 'transform',
                     zIndex: 2,
                     marginLeft: '-80px',

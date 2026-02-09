@@ -299,6 +299,7 @@ export default function WorkSection() {
         >
           <Spline
             scene="https://prod.spline.design/XOofHU3h92QIMFKI/scene.splinecode"
+            renderOnDemand={true}
             onLoad={handleSplineLoad}
           />
         </motion.div>

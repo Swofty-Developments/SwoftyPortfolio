@@ -29,6 +29,12 @@ const navItems = [
   },
 ];
 
+type ContextualOption = {
+  label: string;
+  action: () => void;
+  isActive: boolean;
+};
+
 // Contextual options for About section - dispatches events to AboutSection
 const getAboutContextualOptions = (activeView: string, setActiveView: (view: string) => void) => [
   {
@@ -87,44 +93,108 @@ const getExperienceContextualOptions = (activeFilter: string, setActiveFilter: (
 ];
 
 export default function NavBar() {
-  const [entered, setEntered] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState('home');
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [activeAboutView, setActiveAboutView] = useState<string>('background');
   const [previousSection, setPreviousSection] = useState('home');
   const [isExiting, setIsExiting] = useState(false);
+  const mousePosRef = useRef({ x: 0, y: 0 });
+  const scrollProgressRef = useRef(0);
+  const progressCircleRef = useRef<SVGCircleElement>(null);
+  const activeIndicatorRef = useRef<HTMLDivElement>(null);
+  const topBarRef = useRef<HTMLDivElement>(null);
   const navLinksRef = useRef<(HTMLAnchorElement | null)[]>([]);
+  const activeSectionRef = useRef('home');
+  const exitTimeoutRef = useRef<number | null>(null);
+  const pendingSectionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    setEntered(true);
-  }, []);
+    if (!topBarRef.current) return;
 
-  // Track mouse position for magnetic effect
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
+    const rafId = window.requestAnimationFrame(() => {
+      if (!topBarRef.current) return;
+      topBarRef.current.classList.remove('opacity-0', '-translate-y-4');
+      topBarRef.current.classList.add('opacity-100', 'translate-y-0');
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
     };
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Track scroll progress for ring around logo
+  // RAF-throttled magnetic transform updates with direct DOM writes
   useEffect(() => {
-    const handleScroll = () => {
+    let rafId: number | null = null;
+    const maxDistance = 120;
+    const maxOffset = 8;
+
+    const updateNavLinkTransforms = () => {
+      rafId = null;
+      const { x: mouseX, y: mouseY } = mousePosRef.current;
+
+      navLinksRef.current.forEach((element) => {
+        if (!element) return;
+
+        const rect = element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const dx = mouseX - centerX;
+        const dy = mouseY - centerY;
+        const distance = Math.sqrt((dx * dx) + (dy * dy));
+
+        let xOffset = 0;
+        let yOffset = 0;
+
+        if (distance < maxDistance) {
+          const factor = 1 - (distance / maxDistance);
+          const strength = factor * factor; // Ease
+          const angle = Math.atan2(dy, dx);
+          xOffset = Math.cos(angle) * maxOffset * strength;
+          yOffset = Math.sin(angle) * maxOffset * strength;
+        }
+
+        element.style.transform = `translate(${xOffset}px, ${yOffset - 2}px)`;
+      });
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(updateNavLinkTransforms);
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    updateNavLinkTransforms();
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, []);
+
+  // Consolidated scroll handling for progress ring + active section detection
+  useEffect(() => {
+    const ringCircumference = 2 * Math.PI * 29;
+    let rafId: number | null = null;
+
+    const processScroll = () => {
+      rafId = null;
+
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = scrollHeight > 0 ? (window.scrollY / scrollHeight) * 100 : 0;
-      setScrollProgress(Math.min(100, Math.max(0, progress)));
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+      const clampedProgress = Math.min(100, Math.max(0, progress));
+      scrollProgressRef.current = clampedProgress;
 
-  // Track active section based on scroll position
-  useEffect(() => {
-    const handleScroll = () => {
+      if (progressCircleRef.current) {
+        progressCircleRef.current.setAttribute(
+          'stroke-dashoffset',
+          `${ringCircumference * (1 - (clampedProgress / 100))}`
+        );
+      }
+
       const sections = ['home', 'about', 'experience', 'work', 'contact'];
       let current = 'home';
 
@@ -139,61 +209,103 @@ export default function NavBar() {
         }
       }
 
-      if (current !== activeSection) {
+      const previous = activeSectionRef.current;
+      if (current !== previous) {
         // Check if we're leaving a section with contextual options
-        const wasInContextualSection = activeSection === 'about' || activeSection === 'experience';
+        const wasInContextualSection = previous === 'about' || previous === 'experience';
 
         if (wasInContextualSection) {
+          if (exitTimeoutRef.current !== null) {
+            pendingSectionRef.current = current;
+            return;
+          }
+
           // Trigger exit animation when leaving any contextual section
           setIsExiting(true);
+          pendingSectionRef.current = current;
           // Wait for animation to complete before updating section
-          setTimeout(() => {
-            setPreviousSection(activeSection);
-            setActiveSection(current);
+          exitTimeoutRef.current = window.setTimeout(() => {
+            const nextSection = pendingSectionRef.current ?? current;
+            setPreviousSection(previous);
+            setActiveSection(nextSection);
+            activeSectionRef.current = nextSection;
             setIsExiting(false);
+            exitTimeoutRef.current = null;
+            pendingSectionRef.current = null;
           }, 300); // Match animation duration
         } else {
-          setPreviousSection(activeSection);
+          setPreviousSection(previous);
           setActiveSection(current);
+          activeSectionRef.current = current;
         }
       }
     };
 
+    const handleScroll = () => {
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(processScroll);
+      }
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
+    processScroll();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      if (exitTimeoutRef.current !== null) {
+        window.clearTimeout(exitTimeoutRef.current);
+        exitTimeoutRef.current = null;
+      }
+      pendingSectionRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    activeSectionRef.current = activeSection;
   }, [activeSection]);
 
-  // Calculate magnetic transform for nav items
-  const getMagneticTransform = (index: number) => {
-    const element = navLinksRef.current[index];
-    if (!element) return { x: 0, y: 0 };
+  useEffect(() => {
+    navLinksRef.current.forEach((element) => {
+      if (!element) return;
+      if (!element.style.transform) {
+        element.style.transform = 'translate(0px, -2px)';
+      }
+    });
+  }, [activeSection, isExiting]);
 
-    const rect = element.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+  useEffect(() => {
+    const updateActiveIndicator = () => {
+      if (!activeIndicatorRef.current) return;
 
-    const distance = Math.sqrt(
-      Math.pow(mousePos.x - centerX, 2) +
-      Math.pow(mousePos.y - centerY, 2)
-    );
+      const index = navItems.findIndex(item => item.id === activeSection);
+      if (index === -1) {
+        activeIndicatorRef.current.style.left = '0px';
+        activeIndicatorRef.current.style.width = '0px';
+        return;
+      }
 
-    const maxDistance = 120;
-    const maxOffset = 8;
+      const element = navLinksRef.current[index];
+      if (!element) {
+        activeIndicatorRef.current.style.left = '0px';
+        activeIndicatorRef.current.style.width = '0px';
+        return;
+      }
 
-    if (distance < maxDistance) {
-      const factor = 1 - (distance / maxDistance);
-      const strength = factor * factor; // Ease
-      const angle = Math.atan2(mousePos.y - centerY, mousePos.x - centerX);
+      // Use offsetLeft which is relative to parent and unaffected by transforms
+      activeIndicatorRef.current.style.left = `${element.offsetLeft}px`;
+      activeIndicatorRef.current.style.width = `${element.offsetWidth}px`;
+    };
 
-      return {
-        x: Math.cos(angle) * maxOffset * strength,
-        y: Math.sin(angle) * maxOffset * strength,
-      };
-    }
+    updateActiveIndicator();
+    window.addEventListener('resize', updateActiveIndicator);
 
-    return { x: 0, y: 0 };
-  };
+    return () => {
+      window.removeEventListener('resize', updateActiveIndicator);
+    };
+  }, [activeSection, isExiting]);
 
   // Get contextual options based on active section
   const getContextualOptions = () => {
@@ -231,9 +343,8 @@ export default function NavBar() {
 
       {/* Top bar */}
       <div
-        className={`flex justify-between items-center w-full pointer-events-auto transition-all duration-700 relative z-10 ${
-          entered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
-        }`}
+        ref={topBarRef}
+        className="flex justify-between items-center w-full pointer-events-auto transition-all duration-700 relative z-10 opacity-0 -translate-y-4"
       >
         {/* Swofty logo - click to scroll to top */}
         <a
@@ -263,6 +374,7 @@ export default function NavBar() {
               strokeWidth="2"
             />
             <circle
+              ref={progressCircleRef}
               cx="31"
               cy="31"
               r="29"
@@ -271,7 +383,7 @@ export default function NavBar() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 29}`}
-              strokeDashoffset={`${2 * Math.PI * 29 * (1 - scrollProgress / 100)}`}
+              strokeDashoffset={`${2 * Math.PI * 29}`}
               style={{
                 transform: 'rotate(-90deg)',
                 transformOrigin: '31px 31px',
@@ -326,29 +438,16 @@ export default function NavBar() {
         >
           {/* Active section indicator */}
           <div
+            ref={activeIndicatorRef}
             className="absolute bottom-0 h-[2px] bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 transition-all duration-500 ease-out pointer-events-none"
             style={{
-              left: (() => {
-                const index = navItems.findIndex(item => item.id === activeSection);
-                if (index === -1) return '0px';
-                const element = navLinksRef.current[index];
-                if (!element) return '0px';
-                // Use offsetLeft which is relative to parent and unaffected by transforms
-                return `${element.offsetLeft}px`;
-              })(),
-              width: (() => {
-                const index = navItems.findIndex(item => item.id === activeSection);
-                if (index === -1) return '0px';
-                const element = navLinksRef.current[index];
-                if (!element) return '0px';
-                return `${element.offsetWidth}px`;
-              })(),
+              left: '0px',
+              width: '0px',
               opacity: activeSection === 'home' ? 0 : 1,
             }}
           />
 
           {navItems.map((item, index) => {
-            const transform = getMagneticTransform(index);
             const isActive = activeSection === item.id;
             const isContactButton = index === navItems.length - 1;
 
@@ -369,7 +468,6 @@ export default function NavBar() {
                       : 'text-white/60 hover:text-white'
                 }`}
                 style={{
-                  transform: `translate(${transform.x}px, ${transform.y - 2}px)`,
                   willChange: 'transform',
                 }}
               >
@@ -402,31 +500,23 @@ export default function NavBar() {
             >
               {contextualOptions && (
                 <div className="flex items-center gap-3">
-                  {contextualOptions.map((option: any, idx: number) => {
+                  {contextualOptions.map((option: ContextualOption, idx: number) => {
                     const isActive = option.isActive || false;
                     return (
                       <button
                         key={option.label}
                         onClick={option.action}
-                        className={`text-[10px] tracking-[0.2em] transition-all duration-300 uppercase relative ${
+                        className={`text-[10px] tracking-[0.2em] transition-all duration-300 uppercase relative px-4 py-2 ${
                           isActive
-                            ? 'text-violet-300 -translate-y-1'
-                            : 'text-violet-400/70 hover:text-violet-300 hover:-translate-y-0.5'
+                            ? 'text-white bg-violet-500/20 border border-violet-400/40 backdrop-blur-sm'
+                            : 'text-violet-400/70 hover:text-violet-300 hover:bg-violet-500/10 border border-transparent'
                         }`}
                         style={{
                           animationDelay: !previousHadOptions && !isExiting ? `${(idx + 1) * 100}ms` : '0ms',
+                          borderRadius: '4px',
                         }}
                       >
                         {option.label}
-                        {/* Active indicator bar */}
-                        {isActive && (
-                          <div
-                            className="absolute -bottom-1 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-400 to-fuchsia-400"
-                            style={{
-                              animation: 'scaleInX 0.3s ease-out',
-                            }}
-                          />
-                        )}
                       </button>
                     );
                   })}

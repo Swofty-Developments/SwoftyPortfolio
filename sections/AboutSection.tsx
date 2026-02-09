@@ -7,6 +7,7 @@ export default function AboutSection() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textContentRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const isInViewRef = useRef(false);
   const mousePosRef = useRef({ x: 0, y: 0 });
   const [textRect, setTextRect] = useState<{
     top: number;
@@ -19,18 +20,62 @@ export default function AboutSection() {
   // Store current opacity values for smooth lerping
   const opacityMapRef = useRef<Map<HTMLElement, number>>(new Map());
   const animationFrameRef = useRef<number>(0);
+  const animateRef = useRef<() => void>(() => {});
+
+  const stopAnimation = useCallback(() => {
+    if (!animationFrameRef.current) return;
+    cancelAnimationFrame(animationFrameRef.current);
+    animationFrameRef.current = 0;
+  }, []);
+
+  const queueAnimationFrame = useCallback(() => {
+    animationFrameRef.current = requestAnimationFrame(() => {
+      animationFrameRef.current = 0;
+      animateRef.current();
+    });
+  }, []);
+
+  const startAnimation = useCallback(() => {
+    if (animationFrameRef.current) return;
+    if (document.hidden || !isInViewRef.current) return;
+    queueAnimationFrame();
+  }, [queueAnimationFrame]);
 
   // Visibility observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
+        isInViewRef.current = entry.isIntersecting;
         if (entry.isIntersecting) setIsVisible(true);
+        if (entry.isIntersecting && !document.hidden) {
+          startAnimation();
+        } else {
+          stopAnimation();
+        }
       },
       { threshold: 0.2 }
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [startAnimation, stopAnimation]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopAnimation();
+        return;
+      }
+
+      if (isInViewRef.current) {
+        startAnimation();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [startAnimation, stopAnimation]);
 
   // Listen for contextual actions from navbar
   useEffect(() => {
@@ -80,12 +125,23 @@ export default function AboutSection() {
 
   useEffect(() => {
     updateTextRect();
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(() => {
+          updateTextRect();
+          ticking = false;
+        });
+      }
+    };
+
     window.addEventListener('resize', updateTextRect);
-    window.addEventListener('scroll', updateTextRect, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       window.removeEventListener('resize', updateTextRect);
-      window.removeEventListener('scroll', updateTextRect);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, [isVisible, updateTextRect]);
 
@@ -268,10 +324,15 @@ export default function AboutSection() {
       return Math.max(minOpacityNearText, Math.min(1.0, textFadeOpacity + mouseBoost));
     };
 
-    const animate = () => {
+    animateRef.current = () => {
+      if (!isInViewRef.current || document.hidden) {
+        stopAnimation();
+        return;
+      }
+
       const spans = scrollContainerRef.current?.querySelectorAll<HTMLElement>('[data-tech-span="true"]');
       if (!spans) {
-        animationFrameRef.current = requestAnimationFrame(animate);
+        stopAnimation();
         return;
       }
 
@@ -288,17 +349,15 @@ export default function AboutSection() {
         el.style.opacity = String(newOpacity);
       });
 
-      animationFrameRef.current = requestAnimationFrame(animate);
+      queueAnimationFrame();
     };
 
-    animationFrameRef.current = requestAnimationFrame(animate);
+    startAnimation();
 
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
+      stopAnimation();
     };
-  }, [textRect, highlightMode]);
+  }, [textRect, highlightMode, startAnimation, stopAnimation, queueAnimationFrame]);
 
   return (
     <section id="about" ref={sectionRef} className="min-h-screen relative pointer-events-auto overflow-hidden">

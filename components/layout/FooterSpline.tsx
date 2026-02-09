@@ -58,7 +58,6 @@ export default function FooterSpline() {
               position: 'absolute',
               pointerEvents: 'auto',
             }}
-            renderOnDemand={false}
           />
         </div>
       )}

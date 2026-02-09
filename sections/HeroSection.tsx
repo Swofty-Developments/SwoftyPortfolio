@@ -5,6 +5,8 @@ import { useState, useEffect, useRef } from 'react';
 export default function HeroSection() {
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const charsRef = useRef<NodeListOf<Element> | null>(null);
+  const isInViewRef = useRef(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -13,22 +15,34 @@ export default function HeroSection() {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) {
-      console.log('❌ Container ref not found');
       return;
     }
 
-    console.log('✅ Container ref found, setting up mouse handler');
+    charsRef.current = container.querySelectorAll('[data-magnetic-char]');
 
-    let frameCount = 0;
-    const handleMouseMove = (e: MouseEvent) => {
-      const chars = container.querySelectorAll('[data-magnetic-char]');
+    const observer = new IntersectionObserver(([entry]) => {
+      isInViewRef.current = entry.isIntersecting;
+    });
+    observer.observe(container);
 
-      if (frameCount === 0) {
-        console.log(`🎯 Found ${chars.length} magnetic characters`);
+    let rafId = 0;
+    let pendingEvent: MouseEvent | null = null;
+
+    const processMouseMove = () => {
+      rafId = 0;
+      if (!isInViewRef.current || !pendingEvent) {
+        return;
       }
-      frameCount++;
 
-      chars.forEach((char, index) => {
+      const chars = charsRef.current;
+      if (!chars) {
+        return;
+      }
+
+      const e = pendingEvent;
+      pendingEvent = null;
+
+      chars.forEach((char) => {
         const rect = char.getBoundingClientRect();
         const charCenterX = rect.left + rect.width / 2;
         const charCenterY = rect.top + rect.height / 2;
@@ -48,10 +62,6 @@ export default function HeroSection() {
           const y = -maxLift * easedFactor;
           const scale = 1 + (0.15 * easedFactor);
 
-          if (frameCount % 60 === 0 && index === 0) {
-            console.log(`📊 Char 0: distance=${distance.toFixed(0)}, y=${y.toFixed(1)}, scale=${scale.toFixed(2)}`);
-          }
-
           (char as HTMLElement).style.transform = `translateY(${y}px) scale(${scale})`;
         } else {
           (char as HTMLElement).style.transform = 'translateY(0px) scale(1)';
@@ -59,12 +69,22 @@ export default function HeroSection() {
       });
     };
 
+    const handleMouseMove = (e: MouseEvent) => {
+      pendingEvent = e;
+      if (!rafId) {
+        rafId = requestAnimationFrame(processMouseMove);
+      }
+    };
+
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    console.log('👂 Mouse listener attached');
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      console.log('🔇 Mouse listener removed');
+      observer.disconnect();
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      charsRef.current = null;
     };
   }, []);
   
