@@ -12,7 +12,11 @@ const Spline = dynamic(() => import('@splinetool/react-spline'), {
   ),
 });
 
-export default function SplineBackground() {
+type SplineBackgroundProps = {
+  onSplineLoad?: () => void;
+};
+
+export default function SplineBackground({ onSplineLoad }: SplineBackgroundProps) {
   const [mounted, setMounted] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   
@@ -21,13 +25,9 @@ export default function SplineBackground() {
   }, []);
   
   const handleSplineLoad = () => {
-    console.log('🎨 Spline scene loaded successfully');
     setIsLoaded(true);
+    onSplineLoad?.();
   };
-
-  useEffect(() => {
-    console.log('🌟 SplineBackground mounted:', { mounted, isLoaded, ENABLE_SPLINE });
-  }, [mounted, isLoaded]);
 
   return (
     <div className="w-full h-full">
@@ -58,6 +58,7 @@ export default function SplineBackground() {
           >
             <Spline
               scene="https://prod.spline.design/zKCnRlFiWMuKJfsx/scene.splinecode"
+              renderOnDemand={true}
               onLoad={handleSplineLoad}
               style={{
                 width: '100%',
