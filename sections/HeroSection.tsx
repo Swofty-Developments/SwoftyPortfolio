@@ -25,6 +25,26 @@ export default function HeroSection() {
     });
     observer.observe(container);
 
+    // Cache char rects — only refresh on resize/scroll, not every mousemove frame
+    type CharCache = { el: HTMLElement; cx: number; cy: number; isName: boolean };
+    let cachedChars: CharCache[] = [];
+
+    const refreshCharCache = () => {
+      const chars = charsRef.current;
+      if (!chars) return;
+      cachedChars = Array.from(chars).map((char) => {
+        const rect = char.getBoundingClientRect();
+        return {
+          el: char as HTMLElement,
+          cx: rect.left + rect.width / 2,
+          cy: rect.top + rect.height / 2,
+          isName: char.getAttribute('data-is-name') === 'true',
+        };
+      });
+    };
+
+    refreshCharCache();
+
     let rafId = 0;
     let pendingEvent: MouseEvent | null = null;
 
@@ -34,25 +54,15 @@ export default function HeroSection() {
         return;
       }
 
-      const chars = charsRef.current;
-      if (!chars) {
-        return;
-      }
-
       const e = pendingEvent;
       pendingEvent = null;
 
-      chars.forEach((char) => {
-        const rect = char.getBoundingClientRect();
-        const charCenterX = rect.left + rect.width / 2;
-        const charCenterY = rect.top + rect.height / 2;
+      for (let i = 0; i < cachedChars.length; i++) {
+        const { el, cx, cy, isName } = cachedChars[i];
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const distance = Math.sqrt(dx * dx + dy * dy);
 
-        const distance = Math.sqrt(
-          Math.pow(e.clientX - charCenterX, 2) +
-          Math.pow(e.clientY - charCenterY, 2)
-        );
-
-        const isName = char.getAttribute('data-is-name') === 'true';
         const maxDistance = isName ? 200 : 150;
         const maxLift = isName ? 30 : 15;
 
@@ -62,11 +72,11 @@ export default function HeroSection() {
           const y = -maxLift * easedFactor;
           const scale = 1 + (0.15 * easedFactor);
 
-          (char as HTMLElement).style.transform = `translateY(${y}px) scale(${scale})`;
+          el.style.transform = `translateY(${y}px) scale(${scale})`;
         } else {
-          (char as HTMLElement).style.transform = 'translateY(0px) scale(1)';
+          el.style.transform = 'translateY(0px) scale(1)';
         }
-      });
+      }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -76,10 +86,25 @@ export default function HeroSection() {
       }
     };
 
+    let scrollTicking = false;
+    const handleLayoutChange = () => {
+      if (!scrollTicking) {
+        scrollTicking = true;
+        requestAnimationFrame(() => {
+          refreshCharCache();
+          scrollTicking = false;
+        });
+      }
+    };
+
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('resize', handleLayoutChange);
+    window.addEventListener('scroll', handleLayoutChange, { passive: true });
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', handleLayoutChange);
+      window.removeEventListener('scroll', handleLayoutChange);
       observer.disconnect();
       if (rafId) {
         cancelAnimationFrame(rafId);

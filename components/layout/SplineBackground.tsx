@@ -27,12 +27,31 @@ export default function SplineBackground({ onSplineLoad }: SplineBackgroundProps
       const canvas = document.createElement('canvas');
       const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
       setHasWebGL(!!gl);
-      if (!gl) onSplineLoad?.(); // Fire callback so loading screen dismisses
+      if (!gl) {
+        onSplineLoad?.();
+        setMounted(true);
+        return;
+      }
     } catch {
       setHasWebGL(false);
       onSplineLoad?.();
+      setMounted(true);
+      return;
     }
-    setMounted(true);
+
+    // Defer Spline mount until browser is idle — prevents blocking INP during initial load
+    let cancelled = false;
+    const deferMount = () => {
+      if (!cancelled) setMounted(true);
+    };
+
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(deferMount);
+      return () => { cancelled = true; cancelIdleCallback(id); };
+    } else {
+      const id = window.setTimeout(deferMount, 100);
+      return () => { cancelled = true; window.clearTimeout(id); };
+    }
   }, [onSplineLoad]);
   
   const handleSplineLoad = () => {

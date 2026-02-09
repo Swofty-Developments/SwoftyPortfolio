@@ -122,39 +122,51 @@ export default function NavBar() {
     };
   }, []);
 
-  // RAF-throttled magnetic transform updates with direct DOM writes
+  // RAF-throttled magnetic transform updates with cached rects
   useEffect(() => {
     let rafId: number | null = null;
     const maxDistance = 120;
     const maxOffset = 8;
 
+    // Cache link positions — refresh on resize only, not every frame
+    type LinkCache = { el: HTMLElement; cx: number; cy: number };
+    let cachedLinks: LinkCache[] = [];
+
+    const refreshLinkCache = () => {
+      const links: LinkCache[] = [];
+      for (const el of navLinksRef.current) {
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        links.push({ el, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 });
+      }
+      cachedLinks = links;
+    };
+
+    refreshLinkCache();
+
     const updateNavLinkTransforms = () => {
       rafId = null;
       const { x: mouseX, y: mouseY } = mousePosRef.current;
 
-      navLinksRef.current.forEach((element) => {
-        if (!element) return;
-
-        const rect = element.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const dx = mouseX - centerX;
-        const dy = mouseY - centerY;
-        const distance = Math.sqrt((dx * dx) + (dy * dy));
+      for (let i = 0; i < cachedLinks.length; i++) {
+        const { el, cx, cy } = cachedLinks[i];
+        const dx = mouseX - cx;
+        const dy = mouseY - cy;
+        const distance = Math.sqrt(dx * dx + dy * dy);
 
         let xOffset = 0;
         let yOffset = 0;
 
         if (distance < maxDistance) {
           const factor = 1 - (distance / maxDistance);
-          const strength = factor * factor; // Ease
+          const strength = factor * factor;
           const angle = Math.atan2(dy, dx);
           xOffset = Math.cos(angle) * maxOffset * strength;
           yOffset = Math.sin(angle) * maxOffset * strength;
         }
 
-        element.style.transform = `translate(${xOffset}px, ${yOffset - 2}px)`;
-      });
+        el.style.transform = `translate(${xOffset}px, ${yOffset - 2}px)`;
+      }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -165,10 +177,12 @@ export default function NavBar() {
     };
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('resize', refreshLinkCache);
     updateNavLinkTransforms();
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', refreshLinkCache);
       if (rafId !== null) {
         window.cancelAnimationFrame(rafId);
       }
