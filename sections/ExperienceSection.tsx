@@ -26,7 +26,7 @@ type OrbState = {
 const ORB_RADIUS = 80;
 const ORB_BUFFER = 28;
 const HOVER_RADIUS = ORB_RADIUS + 20;
-const PARTICLE_LINK_DISTANCE = 180;
+const PARTICLE_LINK_DISTANCE = 120;
 
 const ATTRACTION_STRENGTH = 0.0000042;
 const REPULSION_STRENGTH = 30000;
@@ -102,7 +102,7 @@ const createOrbStates = (count: number): OrbState[] => {
 
 const createParticleConfig = (): ParticleConfig[] => {
   const rand = createSeededRandom(20250301);
-  return Array.from({ length: 42 }, () => ({
+  return Array.from({ length: 20 }, () => ({
     uX: rand(),
     uY: rand(),
     ampX: 40 + rand() * 40,
@@ -132,6 +132,7 @@ export default function ExperienceSection() {
   const lastHoveredRef = useRef({ index: -1, releaseTime: 0 });
   const grabReleaseTimeRef = useRef(0);
   const particleConfigRef = useRef<ParticleConfig[]>(createParticleConfig());
+  const cachedRectRef = useRef<DOMRect | null>(null);
 
   const experiences: Experience[] = [
     {
@@ -363,7 +364,7 @@ export default function ExperienceSection() {
 
     const width = rect.width;
     const height = rect.height;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const canvasWidth = Math.floor(width * dpr);
     const canvasHeight = Math.floor(height * dpr);
 
@@ -394,6 +395,10 @@ export default function ExperienceSection() {
     ctx.lineWidth = 1;
     const linkDistanceSq = PARTICLE_LINK_DISTANCE * PARTICLE_LINK_DISTANCE;
 
+    // Bucket links by alpha to batch draw calls (5 buckets instead of per-link strokes)
+    const BUCKET_COUNT = 5;
+    const buckets: { ax: number; ay: number; bx: number; by: number }[][] = Array.from({ length: BUCKET_COUNT }, () => []);
+
     for (let i = 0; i < particleLayout.length; i++) {
       for (let j = i + 1; j < particleLayout.length; j++) {
         const a = particleLayout[i];
@@ -404,12 +409,22 @@ export default function ExperienceSection() {
         if (distSq > linkDistanceSq) continue;
         const dist = Math.sqrt(distSq);
         const t = 1 - dist / PARTICLE_LINK_DISTANCE;
-        ctx.globalAlpha = Math.pow(t, 1.5) * 0.35;
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-        ctx.stroke();
+        const alpha = t * t * 0.3; // simplified from pow(t,1.5)*0.35
+        const bucketIdx = Math.min(BUCKET_COUNT - 1, Math.floor(alpha * BUCKET_COUNT / 0.3));
+        buckets[bucketIdx].push({ ax: a.x, ay: a.y, bx: b.x, by: b.y });
       }
+    }
+
+    for (let b = 0; b < BUCKET_COUNT; b++) {
+      const lines = buckets[b];
+      if (lines.length === 0) continue;
+      ctx.globalAlpha = ((b + 0.5) / BUCKET_COUNT) * 0.3;
+      ctx.beginPath();
+      for (const line of lines) {
+        ctx.moveTo(line.ax, line.ay);
+        ctx.lineTo(line.bx, line.by);
+      }
+      ctx.stroke();
     }
 
     ctx.globalAlpha = 1;
@@ -458,7 +473,10 @@ export default function ExperienceSection() {
 
       const mouse = mouseRef.current;
       const now = performance.now();
-      const rect = containerRef.current?.getBoundingClientRect();
+      if (!cachedRectRef.current && containerRef.current) {
+        cachedRectRef.current = containerRef.current.getBoundingClientRect();
+      }
+      const rect = cachedRectRef.current;
       if (!rect) {
         if (isAnimatingRef.current) {
           frameRef.current = requestAnimationFrame(animate);
@@ -658,8 +676,17 @@ export default function ExperienceSection() {
   }, [stopAnimation]);
 
   useEffect(() => {
+    const updateCachedRect = () => {
+      if (containerRef.current) {
+        cachedRectRef.current = containerRef.current.getBoundingClientRect();
+      }
+    };
+    updateCachedRect();
+    window.addEventListener('resize', updateCachedRect, { passive: true });
+    window.addEventListener('scroll', updateCachedRect, { passive: true });
+
     const handleMove = (e: MouseEvent) => {
-      const rect = containerRef.current?.getBoundingClientRect();
+      const rect = cachedRectRef.current;
       if (!rect) return;
       const inside =
         e.clientX >= rect.left &&
@@ -675,7 +702,11 @@ export default function ExperienceSection() {
       };
     };
     window.addEventListener('mousemove', handleMove, { passive: true });
-    return () => window.removeEventListener('mousemove', handleMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('resize', updateCachedRect);
+      window.removeEventListener('scroll', updateCachedRect);
+    };
   }, []);
 
   useEffect(() => {
