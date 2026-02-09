@@ -1,12 +1,18 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperType } from 'swiper';
+import type { Application } from '@splinetool/runtime';
 import { useScrollLock } from './hooks/useScrollLock';
 
 import 'swiper/css';
+
+const Spline = dynamic(() => import('@splinetool/react-spline'), {
+  ssr: false,
+});
 
 interface Project {
   id: string;
@@ -215,8 +221,10 @@ function SlideIndicators({ currentSlide, total }: { currentSlide: number; total:
 
 export default function WorkSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const splineRef = useRef<Application | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isInView, setIsInView] = useState(false);
+  const [splineLoaded, setSplineLoaded] = useState(false);
   const swiperRef = useRef<SwiperType | null>(null);
 
   // Custom scroll locking
@@ -225,6 +233,24 @@ export default function WorkSection() {
     swiperRef,
     totalSlides: projects.length,
   });
+
+  const handleSplineLoad = useCallback((spline: Application) => {
+    splineRef.current = spline;
+    setSplineLoaded(true);
+  }, []);
+
+  // Trigger Spline hover animation based on current slide
+  useEffect(() => {
+    if (!splineRef.current || !splineLoaded) return;
+
+    const triggerObjectName = 'Hover Trigger';
+
+    if (currentSlide === 1) {
+      splineRef.current.emitEvent('mouseHover', triggerObjectName);
+    } else {
+      splineRef.current.emitEventReverse('mouseHover', triggerObjectName);
+    }
+  }, [currentSlide, splineLoaded]);
 
   // Intersection observer for section visibility
   useEffect(() => {
@@ -239,7 +265,7 @@ export default function WorkSection() {
     return () => observer.disconnect();
   }, []);
 
-  const getBackgroundOffset = (): string => {
+  const getSplineOffset = (): string => {
     const offsets = ['18%', '-18%', '18%'];
     return offsets[currentSlide] || '0%';
   };
@@ -257,35 +283,25 @@ export default function WorkSection() {
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-black via-violet-950/20 to-black" />
 
-      {/* Animated orb background container - outside Swiper so it persists */}
+      {/* Spline container - outside Swiper so it persists */}
       <motion.div
         className="absolute inset-0 w-full h-full z-0"
         initial={false}
-        animate={{ x: getBackgroundOffset() }}
+        animate={{ x: getSplineOffset() }}
         transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
         style={{ pointerEvents: 'none' }}
       >
         <motion.div
-          className="absolute inset-0 w-full h-full"
+          className="w-full h-full"
           initial={false}
           animate={{ scale: currentSlide === 1 ? 1.12 : 1 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          style={{ pointerEvents: 'none' }}
         >
-          <div className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
-            <div
-              className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-violet-600/15 rounded-full blur-[150px]"
-              style={{ animation: 'pulse 4s ease-in-out infinite' }}
-            />
-            <div
-              className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-purple-600/12 rounded-full blur-[120px]"
-              style={{ animation: 'pulse 4s ease-in-out infinite 1s' }}
-            />
-            <div
-              className="absolute top-1/2 right-1/3 w-[400px] h-[400px] bg-fuchsia-600/8 rounded-full blur-[100px]"
-              style={{ animation: 'pulse 4s ease-in-out infinite 2s' }}
-            />
-          </div>
+          <Spline
+            scene="https://prod.spline.design/XOofHU3h92QIMFKI/scene.splinecode"
+            renderOnDemand={true}
+            onLoad={handleSplineLoad}
+          />
         </motion.div>
       </motion.div>
 
