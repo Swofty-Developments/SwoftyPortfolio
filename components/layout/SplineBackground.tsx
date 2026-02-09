@@ -19,10 +19,21 @@ type SplineBackgroundProps = {
 export default function SplineBackground({ onSplineLoad }: SplineBackgroundProps) {
   const [mounted, setMounted] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  
+  const [hasWebGL, setHasWebGL] = useState(true);
+
   useEffect(() => {
+    // Detect WebGL support before attempting to load Spline
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      setHasWebGL(!!gl);
+      if (!gl) onSplineLoad?.(); // Fire callback so loading screen dismisses
+    } catch {
+      setHasWebGL(false);
+      onSplineLoad?.();
+    }
     setMounted(true);
-  }, []);
+  }, [onSplineLoad]);
   
   const handleSplineLoad = () => {
     setIsLoaded(true);
@@ -51,8 +62,8 @@ export default function SplineBackground({ onSplineLoad }: SplineBackgroundProps
           </div>
         </div>
 
-        {/* Spline canvas */}
-        {ENABLE_SPLINE && mounted && (
+        {/* Spline canvas — only rendered when WebGL is available */}
+        {ENABLE_SPLINE && mounted && hasWebGL && (
           <div
             className={`absolute inset-0 transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
           >

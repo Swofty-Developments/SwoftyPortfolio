@@ -225,7 +225,19 @@ export default function WorkSection() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isInView, setIsInView] = useState(false);
   const [splineLoaded, setSplineLoaded] = useState(false);
+  const [hasWebGL, setHasWebGL] = useState(true);
   const swiperRef = useRef<SwiperType | null>(null);
+
+  // Detect WebGL support
+  useEffect(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      setHasWebGL(!!gl);
+    } catch {
+      setHasWebGL(false);
+    }
+  }, []);
 
   // Custom scroll locking
   useScrollLock({
@@ -297,11 +309,28 @@ export default function WorkSection() {
           animate={{ scale: currentSlide === 1 ? 1.12 : 1 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Spline
-            scene="https://prod.spline.design/XOofHU3h92QIMFKI/scene.splinecode"
-            renderOnDemand={true}
-            onLoad={handleSplineLoad}
-          />
+          {hasWebGL ? (
+            <Spline
+              scene="https://prod.spline.design/XOofHU3h92QIMFKI/scene.splinecode"
+              renderOnDemand={true}
+              onLoad={handleSplineLoad}
+            />
+          ) : (
+            <div className="w-full h-full relative">
+              <div
+                className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-violet-600/15 rounded-full blur-[150px]"
+                style={{ animation: 'pulse 4s ease-in-out infinite' }}
+              />
+              <div
+                className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-purple-600/12 rounded-full blur-[120px]"
+                style={{ animation: 'pulse 4s ease-in-out infinite 1s' }}
+              />
+              <div
+                className="absolute top-1/2 right-1/3 w-[400px] h-[400px] bg-fuchsia-600/8 rounded-full blur-[100px]"
+                style={{ animation: 'pulse 4s ease-in-out infinite 2s' }}
+              />
+            </div>
+          )}
         </motion.div>
       </motion.div>
 
