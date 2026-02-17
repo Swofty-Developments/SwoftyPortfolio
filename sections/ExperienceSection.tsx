@@ -951,19 +951,19 @@ export default function ExperienceSection() {
                 exit={{ opacity: 0 }}
               />
 
-              <div className="relative min-h-full flex items-center justify-center px-10 md:px-20 lg:px-28 py-20 md:py-24 pointer-events-auto">
+              <div className="relative min-h-full flex items-center justify-center px-6 md:px-10 py-12 md:py-16 pointer-events-auto">
                 <motion.div
                   initial={{ opacity: 0, y: 18, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 18, scale: 0.97 }}
                   transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className="relative z-10 w-[90%] md:w-[70%] lg:w-[60%] max-w-3xl rounded-3xl border border-violet-500/40 bg-gradient-to-b from-violet-900/40 via-black/80 to-black/95 shadow-[0_0_90px_rgba(124,58,237,0.7)] overflow-hidden p-12 md:p-16 lg:p-18 box-border pointer-events-auto"
+                  className="relative z-10 w-[90%] md:w-[70%] lg:w-[60%] max-w-3xl rounded-3xl border border-violet-500/40 bg-gradient-to-b from-violet-900/40 via-black/80 to-black/95 shadow-[0_0_90px_rgba(124,58,237,0.7)] overflow-hidden p-6 md:p-8 lg:p-10 box-border pointer-events-auto"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="w-full flex justify-center" style={{ marginBottom: '12px' }}>
-                    <div className="w-full max-w-2xl flex flex-col gap-8 md:gap-10 pb-12 md:pb-14 lg:pb-16">
+                    <div className="w-full max-w-2xl flex flex-col gap-6 md:gap-8 pb-6 md:pb-8">
                       <div className="inline-flex">
-                        <div className="px-[5.5rem] md:px-[6rem] py-3 rounded-full bg-gradient-to-r from-violet-500/30 to-purple-500/30 min-w-[230px] flex items-center justify-center">
+                        <div className="px-8 md:px-10 py-2.5 rounded-full bg-gradient-to-r from-violet-500/30 to-purple-500/30 flex items-center justify-center">
                           <span className="text-violet-100 text-[11px] font-medium uppercase tracking-[0.25em] whitespace-nowrap text-center">
                             {selectedItem.type === 'experience'
                               ? 'EXPERIENCE'

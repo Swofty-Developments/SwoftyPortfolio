@@ -444,9 +444,9 @@ export default function NavBar() {
 
         {/* Desktop links on the right with magnetic effect */}
         <div
-          className="hidden md:flex items-center gap-10 relative"
+          className="hidden md:flex items-center gap-8 relative"
           style={{
-            transform: shouldShowContextualOptions ? 'translateX(-200px)' : 'translateX(0)',
+            transform: shouldShowContextualOptions ? 'translateX(-260px)' : 'translateX(0)',
             transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
@@ -494,7 +494,7 @@ export default function NavBar() {
           <div
             className="absolute left-full flex items-center gap-3 pointer-events-none"
             style={{
-              marginLeft: '40px',
+              marginLeft: '24px',
               opacity: shouldShowContextualOptions ? 1 : 0,
               transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
             }}

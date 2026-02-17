@@ -274,7 +274,7 @@ export default function AboutSection() {
       {/* Foreground content */}
       <div className="relative min-h-screen flex flex-col" style={{ zIndex: 10 }}>
         {/* ABOUT ME label at top */}
-        <div className="max-w-6xl mx-auto px-6 md:px-16 w-full pt-24">
+        <div className="px-6 md:px-8 w-full pt-24">
           <div className="grid md:grid-cols-3 gap-12 md:gap-24">
             <div>
               <div className="flex items-center gap-4">
@@ -297,7 +297,7 @@ export default function AboutSection() {
 
         {/* Main content - vertically centered */}
         <div className="flex-1 flex items-center justify-center">
-          <div className="max-w-6xl mx-auto px-6 md:px-16 w-full">
+          <div className="px-6 md:px-8 w-full">
             <div className="grid md:grid-cols-3 gap-12 md:gap-24">
               <div />
               <div data-about-text="true" className={`md:col-span-2 space-y-16 transition-opacity duration-500 ${
