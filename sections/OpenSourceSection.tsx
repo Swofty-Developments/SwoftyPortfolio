@@ -380,8 +380,13 @@ function FeaturedRepoCard({
             </div>
           )}
           {repo.contributors && repo.contributors.length > 0 && (
-            <div className="mt-6 flex items-center gap-3">
-              <ContributorStack contributors={repo.contributors} size={36} max={10} />
+            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
+              <div className="hidden md:block">
+                <ContributorStack contributors={repo.contributors} size={36} max={10} />
+              </div>
+              <div className="md:hidden">
+                <ContributorStack contributors={repo.contributors} size={26} max={6} />
+              </div>
               <span className="text-[12px] text-graphite">
                 {repo.contributors.length} contributor{repo.contributors.length === 1 ? '' : 's'}
               </span>
@@ -892,7 +897,7 @@ function ContributionHeatmap({
             <span className="text-[14px] text-graphite">contributions</span>
           </div>
         </div>
-        <div className="text-right">
+        <div className="hidden md:block text-right">
           <div className="text-[11px] uppercase tracking-[0.18em] text-graphite font-[540]">
             Streak hint
           </div>

@@ -168,15 +168,15 @@ function ContactRow({
   external?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[120px_1fr] items-baseline gap-4 border-b border-fog pb-4">
+    <div className="grid grid-cols-[88px_1fr] sm:grid-cols-[120px_1fr] items-baseline gap-4 border-b border-fog pb-4">
       <dt className="text-[12px] uppercase tracking-[0.16em] text-graphite font-[540]">{label}</dt>
-      <dd className="text-[15px]">
+      <dd className="text-[15px] min-w-0 break-words">
         {href ? (
           <a
             href={href}
             target={external ? '_blank' : undefined}
             rel={external ? 'noreferrer' : undefined}
-            className="link-iris"
+            className="link-iris break-words"
           >
             {value}
           </a>

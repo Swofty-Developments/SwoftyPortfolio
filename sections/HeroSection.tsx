@@ -7,11 +7,10 @@ export default function HeroSection() {
   return (
     <section
       id="home"
-      className="relative w-full overflow-hidden text-bone"
+      className="relative w-full overflow-hidden text-bone min-h-[480px] md:min-h-screen"
       style={{
         // Pull hero up so the banner + nav float OVER it — the video then
         // occupies the entire first viewport, not the part below the chrome.
-        minHeight: '100vh',
         marginTop: '-139px',
       }}
     >
@@ -28,13 +27,13 @@ export default function HeroSection() {
         }}
       />
 
-      {/* Jacob portrait — anchored to bottom-center of hero, edges feathered
-          so the photo melts into the dusk. Sits ABOVE the video but BELOW
-          the floating glass cards and the centered headline content. */}
-      <JacobPortrait />
+      {/* Jacob portrait — anchored to bottom-center on md+ (large enough
+          viewport to absorb the negative margin). On mobile it gets pulled
+          into the content flow below the CTAs instead. */}
+      <JacobPortrait variant="anchored" />
 
-      {/* Cursor dot trail */}
-      <CursorDots className="absolute inset-0 pointer-events-none z-[4]" />
+      {/* Cursor dot trail — desktop only, no cursor on touch devices */}
+      <CursorDots className="hidden md:block absolute inset-0 pointer-events-none z-[4]" />
 
       {/* Floating glassmorphic panels with magnetic pull */}
       <FloatingPanels />
@@ -42,8 +41,7 @@ export default function HeroSection() {
       {/* Hero content — concise, sits in the upper third so it doesn't
           overlap the portrait silhouette below */}
       <div
-        className="relative z-10 container-page flex flex-col items-center text-center"
-        style={{ minHeight: '100vh', paddingTop: '200px', paddingBottom: '60px' }}
+        className="relative z-10 container-page flex flex-col items-center text-center min-h-[480px] md:min-h-screen pt-[150px] md:pt-[200px] pb-0 md:pb-[60px]"
       >
         <h1
           className="anim-fade-down text-white text-display-fluid max-w-[20ch]"
@@ -69,6 +67,11 @@ export default function HeroSection() {
             Get in touch
           </a>
         </div>
+
+        {/* Mobile-only inline portrait — sits right below the CTAs so the
+            face is anchored to the bottom of the visible hero without
+            stretching the section to a full viewport. */}
+        <JacobPortrait variant="inline" />
       </div>
     </section>
   );
@@ -182,20 +185,24 @@ function HeroVideo() {
 }
 
 /**
- * Jacob portrait — anchored bottom-center of hero, edges feathered so the
- * photo melts into the dusk. The white background of the source image is
- * dissolved by an aggressive radial mask + a `mix-blend-mode: lighten`
- * wash that pushes white toward the underlying violet.
+ * Jacob portrait — feathered so the photo melts into the dusk.
+ *
+ *   variant="anchored" → absolute bottom-center, desktop-only. Used on md+
+ *     where the section is full-viewport tall.
+ *   variant="inline"   → relative, mobile-only. Sits inside the content
+ *     column directly under the CTAs so the face is right below the buttons
+ *     without stretching the hero to 100vh.
  */
-function JacobPortrait() {
+function JacobPortrait({ variant }: { variant: 'anchored' | 'inline' }) {
+  const wrapperClass =
+    variant === 'anchored'
+      ? 'hidden md:flex absolute inset-x-0 bottom-0 pointer-events-none z-[2] justify-center'
+      : 'md:hidden mt-auto pointer-events-none w-full flex justify-center';
   return (
-    <div
-      aria-hidden="true"
-      className="absolute inset-x-0 bottom-0 pointer-events-none z-[2] flex justify-center"
-    >
+    <div aria-hidden="true" className={wrapperClass}>
       <div
         style={{
-          width: 'min(1280px, 92vw)',
+          width: variant === 'anchored' ? 'min(1280px, 92vw)' : '92vw',
           aspectRatio: '1535 / 780',
           backgroundImage: 'url(/img/jacob-cut.png)',
           // Figure sits in the right ~60% of the landscape source frame.
@@ -206,7 +213,7 @@ function JacobPortrait() {
           // mask. No CSS filter either: the face should render as the camera
           // captured it, not dimmed/desaturated.
           opacity: 1,
-          transform: 'translateY(2%)',
+          transform: variant === 'anchored' ? 'translateY(2%)' : 'none',
           position: 'relative',
         }}
       />
