@@ -202,16 +202,16 @@ function JacobPortrait({ variant }: { variant: 'anchored' | 'inline' }) {
     <div aria-hidden="true" className={wrapperClass}>
       <div
         style={{
-          width: variant === 'anchored' ? 'min(1280px, 92vw)' : '92vw',
-          aspectRatio: '1535 / 780',
+          width: variant === 'anchored' ? 'min(900px, 84vw)' : '78vw',
+          aspectRatio: '1535 / 1024',
           backgroundImage: 'url(/img/jacob-cut.png)',
-          // Figure sits in the right ~60% of the landscape source frame.
-          backgroundPosition: '62% top',
+          // Figure is centered in the source frame.
+          backgroundPosition: 'center top',
           backgroundSize: 'contain',
           backgroundRepeat: 'no-repeat',
-          // All chroma + feathering is baked into the PNG itself — no CSS
-          // mask. No CSS filter either: the face should render as the camera
-          // captured it, not dimmed/desaturated.
+          // All chroma + top-fade feathering is baked into the PNG itself —
+          // no CSS mask. No CSS filter either: the face should render as
+          // the camera captured it, not dimmed/desaturated.
           opacity: 1,
           transform: variant === 'anchored' ? 'translateY(2%)' : 'none',
           position: 'relative',
