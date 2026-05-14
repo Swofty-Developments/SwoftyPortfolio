@@ -1,359 +1,355 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { LogoTileGrid, LogoBrandDetail } from '@/components/ui/LogoBar';
+
+type Tech = { name: string; slug: string; color: string };
+
+/**
+ * Curated tech list with simple-icons slugs + brand colors.
+ * Icons fetched from cdn.simpleicons.org/{slug}/{color}.
+ */
+const TECH: Tech[] = [
+  { name: 'Kubernetes', slug: 'kubernetes', color: '326CE5' },
+  { name: 'Docker', slug: 'docker', color: '2496ED' },
+  { name: 'Terraform', slug: 'terraform', color: '844FBA' },
+  // AWS and Azure aren't on simple-icons (brand licensing). Served locally
+  // from devicons SVGs instead — see TechTile for the override.
+  { name: 'AWS', slug: '__local:aws', color: 'FF9900' },
+  { name: 'GCP', slug: 'googlecloud', color: '4285F4' },
+  { name: 'Azure', slug: '__local:azure', color: '0078D4' },
+  { name: 'Postgres', slug: 'postgresql', color: '4169E1' },
+  { name: 'Redis', slug: 'redis', color: 'DC382D' },
+  { name: 'Kafka', slug: 'apachekafka', color: '231F20' },
+  { name: 'gRPC', slug: 'trpc', color: '2596BE' },
+  { name: 'GraphQL', slug: 'graphql', color: 'E10098' },
+  { name: 'Nginx', slug: 'nginx', color: '009639' },
+  { name: 'Java', slug: 'openjdk', color: 'ED8B00' },
+  { name: 'Go', slug: 'go', color: '00ADD8' },
+  { name: 'Python', slug: 'python', color: '3776AB' },
+  { name: 'TypeScript', slug: 'typescript', color: '3178C6' },
+  { name: 'Rust', slug: 'rust', color: 'CE412B' },
+  { name: 'FastAPI', slug: 'fastapi', color: '009688' },
+  { name: 'Next.js', slug: 'nextdotjs', color: '000000' },
+  { name: 'React', slug: 'react', color: '61DAFB' },
+  { name: 'Node.js', slug: 'nodedotjs', color: '5FA04E' },
+  { name: 'Spring Boot', slug: 'springboot', color: '6DB33F' },
+  { name: 'Datadog', slug: 'datadog', color: '632CA6' },
+  { name: 'CI/CD', slug: 'githubactions', color: '2088FF' },
+];
+
+type Interest = {
+  name: string;
+  caption: string;
+};
+
+const INTERESTS: Interest[] = [
+  { name: 'Competitive programming', caption: 'algorithm gymnastics on the weekend' },
+  { name: 'Distributed systems', caption: 'event sourcing, CQRS, Kafka topologies' },
+  { name: 'Graph theory', caption: 'shortest paths, max flows, MSTs' },
+  { name: 'Number theory', caption: 'modular arithmetic, primality, lattices' },
+  { name: 'Game infrastructure', caption: '200k CCU at Hypixel taught me a lot' },
+  { name: 'Performance tuning', caption: 'p99 latency is where the truth lives' },
+  { name: 'Compilers & languages', caption: 'i wrote a scripting language in C++' },
+  { name: 'Open source', caption: '57 repos, 450+ stars, still going' },
+  { name: 'Hackathons', caption: '48 hours, no sleep, a working product' },
+];
+
+/** Brand → tile index mapping for inline mentions in the bio paragraph. */
+const BRAND_INDEX: Record<string, number> = {
+  Lyra: 0,
+  Hypixel: 1,
+  Ceebs: 2,
+  'Bathroom Superstore': 3,
+};
 
 export default function AboutSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [highlightMode, setHighlightMode] = useState<'all' | 'background' | 'skills' | 'interests'>('all');
-
-  // Cross-dissolve for smooth mode transitions (mask <-> class-based opacity)
-  const [effectiveMode, setEffectiveMode] = useState<typeof highlightMode>('all');
-  const [containerOpacity, setContainerOpacity] = useState(1);
+  const ref = useRef<HTMLElement>(null);
+  const [visible, setVisible] = useState(false);
+  /** Sticky-selected brand. Tiles, inline mentions, and the detail card all
+   *  share this state. */
+  const [activeBrand, setActiveBrand] = useState(0);
 
   useEffect(() => {
-    if (highlightMode === effectiveMode) return;
-    // Fade out, swap mode, fade back in
-    setContainerOpacity(0);
-    const timer = setTimeout(() => {
-      setEffectiveMode(highlightMode);
-      requestAnimationFrame(() => setContainerOpacity(1));
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [highlightMode, effectiveMode]);
-
-  // Visibility observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true);
-      },
-      { threshold: 0.2 }
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => e.isIntersecting && setVisible(true),
+      { threshold: 0.15 }
     );
-    if (sectionRef.current) observer.observe(sectionRef.current);
-    return () => observer.disconnect();
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
-  // Listen for contextual actions from navbar
-  useEffect(() => {
-    const handleAboutAction = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const action = customEvent.detail;
-
-      if (action === 'background') {
-        setHighlightMode('background');
-        const aboutSection = document.getElementById('about');
-        if (aboutSection) {
-          const textContent = aboutSection.querySelector('[data-about-text="true"]');
-          textContent?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      } else if (action === 'skills') {
-        setHighlightMode('skills');
-        const aboutSection = document.getElementById('about');
-        aboutSection?.scrollIntoView({ behavior: 'smooth' });
-      } else if (action === 'interests') {
-        setHighlightMode('interests');
-        const aboutSection = document.getElementById('about');
-        if (aboutSection) {
-          const textContent = aboutSection.querySelector('[data-about-text="true"]');
-          textContent?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    };
-
-    window.addEventListener('aboutAction', handleAboutAction as EventListener);
-    return () => {
-      window.removeEventListener('aboutAction', handleAboutAction as EventListener);
-    };
-  }, []);
-
-  // Mouse tracking: update 2 CSS custom properties instead of 980 span opacity writes
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
-      const inside =
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom;
-
-      if (inside) {
-        container.style.setProperty('--mx', `${e.clientX - rect.left}px`);
-        container.style.setProperty('--my', `${e.clientY - rect.top}px`);
-      } else {
-        container.style.setProperty('--mx', '-9999px');
-        container.style.setProperty('--my', '-9999px');
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
-  const technologies = [
-    { text: 'kubernetes', category: 'skill' },
-    { text: 'competitive programming', category: 'interest' },
-    { text: 'docker', category: 'skill' },
-    { text: 'minecraft development', category: 'interest' },
-    { text: 'java', category: 'skill' },
-    { text: 'algorithm design', category: 'interest' },
-    { text: 'python', category: 'skill' },
-    { text: 'open source', category: 'interest' },
-    { text: 'react', category: 'skill' },
-    { text: 'hackathons', category: 'interest' },
-    { text: 'typescript', category: 'skill' },
-    { text: 'system architecture', category: 'interest' },
-    { text: 'postgresql', category: 'skill' },
-    { text: 'mathematics', category: 'interest' },
-    { text: 'kafka', category: 'skill' },
-    { text: 'machine learning', category: 'interest' },
-    { text: 'mongodb', category: 'skill' },
-    { text: 'data science', category: 'interest' },
-    { text: 'next.js', category: 'skill' },
-    { text: 'artificial intelligence', category: 'interest' },
-    { text: 'node.js', category: 'skill' },
-    { text: 'deep learning', category: 'interest' },
-    { text: 'redis', category: 'skill' },
-    { text: 'neural networks', category: 'interest' },
-    { text: 'aws', category: 'skill' },
-    { text: 'problem solving', category: 'interest' },
-    { text: 'graphql', category: 'skill' },
-    { text: 'graph theory', category: 'interest' },
-    { text: 'terraform', category: 'skill' },
-    { text: 'dynamic programming', category: 'interest' },
-    { text: 'google cloud', category: 'skill' },
-    { text: 'game development', category: 'interest' },
-    { text: 'jenkins', category: 'skill' },
-    { text: 'multiplayer systems', category: 'interest' },
-    { text: 'rest apis', category: 'skill' },
-    { text: 'plugin architecture', category: 'interest' },
-    { text: 'azure', category: 'skill' },
-    { text: 'optimization', category: 'interest' },
-    { text: 'spring boot', category: 'skill' },
-    { text: 'scalability', category: 'interest' },
-    { text: 'github actions', category: 'skill' },
-    { text: 'distributed systems', category: 'interest' },
-    { text: 'fastapi', category: 'skill' },
-    { text: 'event sourcing', category: 'interest' },
-    { text: 'mysql', category: 'skill' },
-    { text: 'cqrs', category: 'interest' },
-    { text: 'express.js', category: 'skill' },
-    { text: 'number theory', category: 'interest' },
-    { text: 'grpc', category: 'skill' },
-    { text: 'combinatorics', category: 'interest' },
-    { text: 'elasticsearch', category: 'skill' },
-    { text: 'coding competitions', category: 'interest' },
-    { text: 'rabbitmq', category: 'skill' },
-    { text: 'software engineering', category: 'interest' },
-    { text: 'nginx', category: 'skill' },
-    { text: 'performance tuning', category: 'interest' },
-    { text: 'linux', category: 'skill' },
-    { text: 'debugging', category: 'interest' },
-    { text: 'bash', category: 'skill' },
-    { text: 'refactoring', category: 'interest' },
-    { text: 'git', category: 'skill' },
-    { text: 'code review', category: 'interest' },
-    { text: 'ci/cd', category: 'skill' },
-    { text: 'team collaboration', category: 'interest' },
-    { text: 'microservices', category: 'skill' },
-    { text: 'mentoring', category: 'interest' },
-    { text: 'devops', category: 'skill' },
-    { text: 'teaching', category: 'interest' },
-    { text: 'monitoring', category: 'skill' },
-    { text: 'technical writing', category: 'interest' },
-  ];
-
-  // Determine mask mode based on effective (post-transition) mode
-  const useMouseSpotlight = effectiveMode === 'all' || effectiveMode === 'background';
-  const spotlightRadius = effectiveMode === 'background' ? 180 : 220;
-  const baseAlpha = effectiveMode === 'background' ? 0.06 : 0.12;
-
-  // Text area fade mask — outer div fades content near the right side where text lives
-  // This attenuates BOTH the base visibility and the spotlight near the text area
-  const textAreaMaskStyle: React.CSSProperties = useMouseSpotlight ? {
-    WebkitMaskImage: 'linear-gradient(to right, black 0%, black 35%, transparent 58%)',
-    maskImage: 'linear-gradient(to right, black 0%, black 35%, transparent 58%)',
-  } : {};
-
-  // Spotlight + base mask — inner div provides mouse-following spotlight and base opacity
-  // mask-composite: add means alpha = spotlight_alpha + base_alpha
-  const spotlightMaskStyle: React.CSSProperties = useMouseSpotlight ? {
-    WebkitMaskImage: `radial-gradient(circle ${spotlightRadius}px at var(--mx, -9999px) var(--my, -9999px), rgba(0,0,0,0.55), transparent), linear-gradient(rgba(0,0,0,${baseAlpha}), rgba(0,0,0,${baseAlpha}))`,
-    maskImage: `radial-gradient(circle ${spotlightRadius}px at var(--mx, -9999px) var(--my, -9999px), rgba(0,0,0,0.55), transparent), linear-gradient(rgba(0,0,0,${baseAlpha}), rgba(0,0,0,${baseAlpha}))`,
-    WebkitMaskComposite: 'source-over',
-    maskComposite: 'add',
-  } as React.CSSProperties : {};
-
-  // CSS class for highlight modes (skills/interests) — handled by globals.css rules
-  const highlightClass =
-    effectiveMode === 'skills'
-      ? 'about-highlight-skills'
-      : effectiveMode === 'interests'
-        ? 'about-highlight-interests'
-        : '';
+  const Mention = ({ name }: { name: string }) => {
+    const idx = BRAND_INDEX[name];
+    const isActive = activeBrand === idx;
+    return (
+      <span
+        onMouseEnter={() => setActiveBrand(idx)}
+        onFocus={() => setActiveBrand(idx)}
+        tabIndex={0}
+        className={`brand-mention ${isActive ? 'brand-mention--active' : ''}`}
+      >
+        {name}
+      </span>
+    );
+  };
 
   return (
-    <section id="about" ref={sectionRef} className="min-h-screen relative pointer-events-auto overflow-hidden">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm -z-10" />
-
-      {/* Outer wrapper: mode transition cross-dissolve + text area fade mask */}
-      <div
-        className="absolute inset-0"
-        style={{
-          zIndex: 0,
-          opacity: containerOpacity,
-          transition: 'opacity 0.25s ease',
-          ...textAreaMaskStyle,
-        }}
-      >
-        {/* Scroll container: spotlight + base mask (GPU-composited via CSS mask-image) */}
-        <div
-          ref={scrollContainerRef}
-          className={`w-full h-full flex flex-col justify-around transition-opacity duration-1000 ${highlightClass} ${
-            isVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-          style={{
-            padding: '10vh 0',
-            ...spotlightMaskStyle,
-          } as React.CSSProperties}
+    <section
+      id="about"
+      ref={ref}
+      className="section-frame relative w-full bg-parchment text-ink"
+      style={{ paddingBlock: '120px' }}
+    >
+      <div className="container-page">
+        <h2
+          className={`reveal text-heading-lg-fluid max-w-[26ch] ${visible ? 'is-visible' : ''}`}
+          style={{ transitionDelay: '60ms' }}
         >
-          {[0, 1, 2, 3, 4, 5, 6].map((rowIndex) => {
-            const isEven = rowIndex % 2 === 0;
-            const shuffledTechs = [...technologies].slice(rowIndex * 10).concat([...technologies].slice(0, rowIndex * 10));
+          I&apos;m the engineer founders want in the room when the product has to actually work.
+        </h2>
 
-            return (
-              <div
-                key={rowIndex}
-                className="relative flex overflow-hidden"
+        {/* Side-by-side: bio paragraph on the left, logo tile grid on the
+            right. The detail card sits below at full width so the company
+            description has room to breathe. */}
+        <div className="mt-12 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
+          <div
+            className={`reveal lg:col-span-5 space-y-5 text-[16px] leading-[1.6] text-graphite ${visible ? 'is-visible' : ''}`}
+            style={{ transitionDelay: '120ms' }}
+          >
+            <p>
+              I&apos;m a Forward Deployed Engineer at <Mention name="Lyra" />, embedded with founders and shipping product where it actually meets users. Outside of Lyra I&apos;m studying Advanced Computer Science (Honours) at Monash, specialising in algorithms and software.
+            </p>
+            <p>
+              Before Lyra I was scaling Minecraft infrastructure at <Mention name="Hypixel" /> for 200k+ concurrent players, designing an event-sourced food-delivery platform at <Mention name="Ceebs" />, and running distributed inventory systems at <Mention name="Bathroom Superstore" />.
+            </p>
+          </div>
+
+          <div
+            className={`reveal lg:col-span-7 ${visible ? 'is-visible' : ''}`}
+            style={{ transitionDelay: '200ms' }}
+          >
+            <LogoTileGrid active={activeBrand} onChange={setActiveBrand} />
+          </div>
+        </div>
+
+        {/* Full-width detail card — describes the currently-active brand. */}
+        <div
+          className={`mt-6 reveal ${visible ? 'is-visible' : ''}`}
+          style={{ transitionDelay: '260ms' }}
+        >
+          <LogoBrandDetail active={activeBrand} />
+        </div>
+
+        {/* Stack — bento icon grid */}
+        <div className="mt-20">
+          <div className="flex items-baseline justify-between gap-4 mb-6">
+            <h3 className={`text-heading-sm reveal ${visible ? 'is-visible' : ''}`}>
+              Day-to-day toolbox
+            </h3>
+            <span className="text-[12px] uppercase tracking-[0.18em] text-graphite font-[540]">
+              {TECH.length} tools
+            </span>
+          </div>
+          <p
+            className={`max-w-[64ch] text-[15px] text-graphite leading-[1.55] mb-6 reveal ${visible ? 'is-visible' : ''}`}
+            style={{ transitionDelay: '60ms' }}
+          >
+            The technologies I reach for first when designing, deploying, or breaking something.
+          </p>
+          <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+            {TECH.map((t, idx) => (
+              <li
+                key={t.name}
+                className={`reveal ${visible ? 'is-visible' : ''}`}
+                style={{ transitionDelay: `${100 + idx * 25}ms` }}
               >
-                <div
-                  className={`flex whitespace-nowrap ${
-                    isEven ? 'animate-scroll-left' : 'animate-scroll-right'
-                  }`}
-                >
-                  {shuffledTechs.map((tech, index) => (
-                    <span
-                      key={`row${rowIndex}-a-${index}`}
-                      data-tech-span="true"
-                      data-category={tech.category}
-                      className="text-5xl md:text-7xl lg:text-8xl font-light text-violet-500 mx-6 md:mx-10"
-                      style={{ fontFamily: "'Playfair Display', serif" }}
-                    >
-                      {tech.text}
-                    </span>
-                  ))}
-                </div>
-                <div
-                  className={`flex whitespace-nowrap ${
-                    isEven ? 'animate-scroll-left' : 'animate-scroll-right'
-                  }`}
-                  aria-hidden="true"
-                >
-                  {shuffledTechs.map((tech, index) => (
-                    <span
-                      key={`row${rowIndex}-b-${index}`}
-                      data-tech-span="true"
-                      data-category={tech.category}
-                      className="text-5xl md:text-7xl lg:text-8xl font-light text-violet-500 mx-6 md:mx-10"
-                      style={{ fontFamily: "'Playfair Display', serif" }}
-                    >
-                      {tech.text}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Foreground content */}
-      <div className="relative min-h-screen flex flex-col" style={{ zIndex: 10 }}>
-        {/* ABOUT ME label at top */}
-        <div className="px-6 md:px-8 w-full pt-24">
-          <div className="grid md:grid-cols-3 gap-12 md:gap-24">
-            <div>
-              <div className="flex items-center gap-4">
-                <div
-                  className={`h-[1px] bg-gradient-to-r from-violet-500/0 via-violet-500/60 to-violet-500 transition-all duration-1000 ${
-                    isVisible ? 'w-24' : 'w-0'
-                  }`}
-                />
-                <span
-                  className={`text-xs tracking-[0.3em] text-violet-400/60 whitespace-nowrap transition-all duration-700 delay-300 ${
-                    isVisible ? 'opacity-100' : 'opacity-0'
-                  }`}
-                >
-                  ABOUT ME
-                </span>
-              </div>
-            </div>
-          </div>
+                <TechTile tech={t} />
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Main content - vertically centered */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="px-6 md:px-8 w-full">
-            <div className="grid md:grid-cols-3 gap-12 md:gap-24">
-              <div />
-              <div data-about-text="true" className={`md:col-span-2 space-y-16 transition-opacity duration-500 ${
-                highlightMode === 'skills' || highlightMode === 'interests' ? 'opacity-0 pointer-events-none' : 'opacity-100'
-              }`}>
-                <h2
-                  className={`text-4xl md:text-5xl lg:text-6xl font-light leading-[1.4] transition-all duration-1000 ${
-                    isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-                  }`}
-                  style={{ fontFamily: "'Playfair Display', serif" }}
-                >
-                  <span className="text-white">Hello! My name is </span>
-                  <span
-                    className="inline-block"
-                    style={{
-                      background: 'linear-gradient(180deg, #c4b5fd 0%, #a855f7 50%, #d946ef 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                    }}
-                  >
-                    Swofty
-                  </span>
-                  <br className="hidden md:block" />
-                  <span className="text-white">and I enjoy creating things</span>
-                  <br className="hidden md:block" />
-                  <span className="text-white">that live on the internet.</span>
-                </h2>
-
-                <div
-                  className={`space-y-8 transition-all duration-1000 delay-200 ${
-                    isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-                  }`}
-                >
-                  <p className="text-white/70 text-xl leading-[1.8] max-w-2xl">
-                    I'm a <span className="text-violet-300/90">computer science student</span> and competitive programmer,
-                    currently studying Advanced Computer Science with Honours at university.
-                  </p>
-
-                  <p className="text-white/70 text-xl leading-[1.8] max-w-2xl">
-                    Majoring in <span className="text-violet-300/90">Mathematics</span> and specializing in{' '}
-                    <span className="text-violet-300/90">Data Science</span> and{' '}
-                    <span className="text-violet-300/90">Artificial Intelligence</span>.
-                  </p>
-
-                  <p className="text-white/70 text-xl leading-[1.8] max-w-2xl">
-                    I have extensive experience with <span className="text-violet-300/90">Minecraft development</span> and
-                    building large-scale multiplayer experiences, including an open source Hypixel SkyBlock
-                    recreation that has gained hundreds of stars on GitHub.
-                  </p>
-                </div>
-              </div>
-            </div>
+        {/* Interests — typewriter cycler */}
+        <div className="mt-20">
+          <div className="flex items-baseline justify-between gap-4 mb-6">
+            <h3 className={`text-heading-sm reveal ${visible ? 'is-visible' : ''}`}>
+              What I think about
+            </h3>
+            <span className="text-[12px] uppercase tracking-[0.18em] text-graphite font-[540]">
+              Always learning
+            </span>
           </div>
+          <InterestCycler interests={INTERESTS} active={visible} />
         </div>
       </div>
     </section>
+  );
+}
+
+function TechTile({ tech }: { tech: Tech }) {
+  return (
+    <div
+      className="group relative bg-bone border border-fog rounded-[14px] aspect-square flex flex-col items-center justify-center gap-2 px-2 transition-all duration-200 hover:border-driftwood hover:-translate-y-[2px] hover:shadow-[0_8px_20px_rgba(20,12,38,0.06)] cursor-default overflow-hidden"
+      title={tech.name}
+    >
+      {/* Subtle brand-color halo at the corner */}
+      <div
+        aria-hidden="true"
+        className="absolute -top-6 -right-6 w-16 h-16 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300 blur-2xl"
+        style={{ background: `#${tech.color}` }}
+      />
+
+      <div className="relative w-7 h-7 grayscale-[0.18] group-hover:grayscale-0 transition-all duration-200">
+        <img
+          src={
+            tech.slug.startsWith('__local:')
+              ? `/img/tech/${tech.slug.slice(8)}.svg`
+              : `https://cdn.simpleicons.org/${tech.slug}/${tech.color}`
+          }
+          alt=""
+          aria-hidden="true"
+          width={28}
+          height={28}
+          loading="lazy"
+          decoding="async"
+          className="w-7 h-7 object-contain transition-transform duration-200 group-hover:scale-110"
+        />
+      </div>
+      <span className="relative text-[11px] font-[540] tracking-[-0.005em] text-ink/80 text-center leading-tight">
+        {tech.name}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Typewriter-style interest cycler. One interest is featured at a time,
+ * with the name typing in letter-by-letter and the caption fading. Cycles
+ * every ~3.5s. List of all interests sits to the side as muted text — the
+ * current one lights up.
+ */
+function InterestCycler({
+  interests,
+  active,
+}: {
+  interests: Interest[];
+  active: boolean;
+}) {
+  const [index, setIndex] = useState(0);
+  const [typed, setTyped] = useState('');
+  const [phase, setPhase] = useState<'typing' | 'hold' | 'erasing'>('typing');
+  const indexRef = useRef(index);
+  const userPickedRef = useRef(false);
+
+  // Sync ref so setInterval callbacks see latest
+  useEffect(() => {
+    indexRef.current = index;
+  }, [index]);
+
+  // Typewriter effect
+  useEffect(() => {
+    if (!active) return;
+    const target = interests[index].name;
+    let t: number;
+    if (phase === 'typing') {
+      if (typed.length < target.length) {
+        t = window.setTimeout(() => setTyped(target.slice(0, typed.length + 1)), 36);
+      } else {
+        t = window.setTimeout(() => setPhase('hold'), 1600);
+      }
+    } else if (phase === 'hold') {
+      t = window.setTimeout(() => setPhase('erasing'), 0);
+    } else {
+      if (typed.length > 0) {
+        t = window.setTimeout(() => setTyped(typed.slice(0, -1)), 18);
+      } else {
+        t = window.setTimeout(() => {
+          setIndex((i) => (i + 1) % interests.length);
+          setPhase('typing');
+        }, 200);
+      }
+    }
+    return () => window.clearTimeout(t);
+  }, [typed, phase, index, interests, active]);
+
+  // When user clicks an interest, jump to it (and pause auto-cycle briefly)
+  const handlePick = (i: number) => {
+    userPickedRef.current = true;
+    setIndex(i);
+    setTyped('');
+    setPhase('typing');
+  };
+
+  const current = interests[index];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 items-start">
+      {/* Featured card — typewriter headline + caption */}
+      <div className="md:col-span-7 card-lg min-h-[220px] relative overflow-hidden">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-iris font-[540]">
+          Currently on my mind
+        </div>
+        <h4
+          className="mt-4 text-heading tracking-[-0.022em] text-ink"
+          style={{ minHeight: '1.2em' }}
+        >
+          {typed}
+          <span
+            className="inline-block w-[3px] h-[0.9em] align-text-bottom ml-0.5 bg-iris animate-pulse"
+            aria-hidden="true"
+          />
+        </h4>
+        <p
+          className="mt-3 text-[15px] leading-[1.55] text-graphite max-w-[44ch] transition-opacity duration-300"
+          style={{ opacity: phase === 'erasing' ? 0.4 : 1 }}
+        >
+          {current.caption}
+        </p>
+
+        {/* Decorative iris gradient */}
+        <div
+          aria-hidden="true"
+          className="absolute -bottom-16 -right-16 w-40 h-40 rounded-full pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(113,76,182,0.16), rgba(113,76,182,0) 70%)',
+          }}
+        />
+      </div>
+
+      {/* Compact list — click to jump */}
+      <ul className="md:col-span-5 space-y-1">
+        {interests.map((i, idx) => {
+          const isActive = idx === index;
+          return (
+            <li key={i.name}>
+              <button
+                type="button"
+                onClick={() => handlePick(idx)}
+                className={`group flex items-center justify-between w-full text-left px-3 py-2 rounded-[8px] transition-colors duration-200 ${
+                  isActive ? 'bg-bone' : 'hover:bg-bone/60'
+                }`}
+              >
+                <span
+                  className={`text-[14px] tracking-[-0.005em] transition-colors ${
+                    isActive ? 'text-ink font-[540]' : 'text-graphite group-hover:text-ink'
+                  }`}
+                >
+                  {i.name}
+                </span>
+                <span
+                  className={`inline-block h-1.5 transition-all duration-200 rounded-full ${
+                    isActive ? 'w-6 bg-iris' : 'w-1.5 bg-driftwood'
+                  }`}
+                />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
