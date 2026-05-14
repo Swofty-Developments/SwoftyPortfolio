@@ -1,139 +1,740 @@
 @import "tailwindcss";
 
+@theme {
+  /* ---------- Colors ---------- */
+  --color-parchment: #f2f0eb;
+  --color-ink: #292827;
+  --color-bone: #ffffff;
+  --color-fog: #e3e3e2;
+  --color-driftwood: #dcd7d3;
+  --color-graphite: #666666;
+  --color-aubergine: #421d24;
+  --color-aubergine-deep: #4e242c;
+  --color-iris: #714cb6;
+  --color-indigo-glow: #353088;
+  --color-lavender-chip: #d4c7ff;
+
+  /* ---------- Typography ---------- */
+  --font-sans: var(--font-super-sans), "Inter Variable", "Inter", ui-sans-serif,
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Type scale (matches Superhuman tokens) */
+  --text-caption: 12px;
+  --text-body-sm: 14px;
+  --text-body: 16px;
+  --text-subheading: 18px;
+  --text-19: 19px;
+  --text-20: 20px;
+  --text-heading-sm: 22px;
+  --text-26: 26px;
+  --text-heading: 28px;
+  --text-heading-lg: 48px;
+  --text-display: 64px;
+
+  /* ---------- Spacing ---------- */
+  --spacing: 4px;
+
+  /* ---------- Radius ---------- */
+  --radius-button: 8px;
+  --radius-link: 12px;
+  --radius-card: 16px;
+  --radius-card-lg: 24px;
+  --radius-pill: 999px;
+
+  /* ---------- Layout ---------- */
+  --layout-max: 1200px;
+}
+
 @layer base {
-  * {
+  *,
+  *::before,
+  *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
+
+  :root {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background: var(--color-parchment);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-parchment);
+    color: var(--color-ink);
+    overflow-x: hidden;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  ::selection {
+    background: var(--color-lavender-chip);
+    color: var(--color-ink);
+  }
+
+  /* Display + heading defaults — Superhuman uses tight negative tracking */
+  .text-display {
+    font-size: var(--text-display);
+    line-height: 0.96;
+    letter-spacing: -0.028em;
+    font-weight: 600;
+  }
+  .text-heading-lg {
+    font-size: var(--text-heading-lg);
+    line-height: 1;
+    letter-spacing: -0.027em;
+    font-weight: 600;
+  }
+  .text-heading {
+    font-size: var(--text-heading);
+    line-height: 1.14;
+    letter-spacing: -0.022em;
+    font-weight: 600;
+  }
+  .text-heading-sm {
+    font-size: var(--text-heading-sm);
+    line-height: 1.25;
+    letter-spacing: -0.014em;
+    font-weight: 540;
+  }
+  .text-subheading {
+    font-size: var(--text-subheading);
+    line-height: 1.5;
+    letter-spacing: -0.008em;
+    font-weight: 540;
+  }
+
+  /* Clamp variants for responsive display sizes */
+  .text-display-fluid {
+    font-size: clamp(36px, 6vw, 76px);
+    line-height: 0.98;
+    letter-spacing: -0.026em;
+    font-weight: 600;
+  }
+  .text-heading-lg-fluid {
+    font-size: clamp(32px, 4.4vw, 56px);
+    line-height: 1;
+    letter-spacing: -0.027em;
+    font-weight: 600;
+  }
 }
 
-html {
-  scroll-behavior: smooth;
+/* ---------- Components ---------- */
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: var(--layout-max);
+    margin-inline: auto;
+    padding-inline: 24px;
+  }
+
+  /* Primary white pill on dark hero */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    background: #ffffff;
+    color: var(--color-ink);
+    border-radius: var(--radius-button);
+    font-weight: 540;
+    font-size: 14px;
+    letter-spacing: -0.005em;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    box-shadow: 0 0 0 0 rgba(113, 76, 182, 0);
+  }
+  .btn-primary svg {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 0 4px rgba(113, 76, 182, 0.18);
+  }
+  .btn-primary:hover svg {
+    transform: translateX(4px);
+  }
+  .btn-primary:focus-visible {
+    outline: none;
+    box-shadow: rgb(113, 76, 182) 0px 0px 0px 2px inset;
+  }
+
+  /* Iris ghost (outlined) button on light surfaces */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: transparent;
+    color: var(--color-iris);
+    border: 1px solid var(--color-iris);
+    border-radius: var(--radius-button);
+    font-weight: 540;
+    font-size: 14px;
+    letter-spacing: -0.005em;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  }
+  .btn-ghost:hover {
+    background: rgba(113, 76, 182, 0.06);
+  }
+  .btn-ghost:focus-visible {
+    outline: none;
+    box-shadow: rgb(113, 76, 182) 0px 0px 0px 2px inset;
+  }
+
+  /* Ghost on dark backgrounds (announcement banner, footer) */
+  .btn-ghost-dark {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-button);
+    font-weight: 540;
+    font-size: 14px;
+    letter-spacing: -0.005em;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .btn-ghost-dark:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  /* Lavender chip — sign-up button on dark hero */
+  .btn-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--color-lavender-chip);
+    color: var(--color-ink);
+    border-radius: var(--radius-button);
+    font-weight: 540;
+    font-size: 14px;
+    letter-spacing: -0.005em;
+    transition: filter 0.2s ease, transform 0.2s ease;
+  }
+  .btn-chip:hover {
+    filter: brightness(0.95);
+  }
+
+  /* White card surface */
+  .card {
+    background: var(--color-bone);
+    border: 1px solid var(--color-fog);
+    border-radius: var(--radius-card);
+    padding: 24px;
+  }
+  .card-lg {
+    background: var(--color-bone);
+    border: 1px solid var(--color-fog);
+    border-radius: var(--radius-card-lg);
+    padding: 32px;
+  }
+
+  /* Glassmorphic floating panel for hero overlays — recipe scraped directly
+     from superhuman.com's .hero-card_card. Stacked gradients (white sheen
+     from top-left + indigo wash) plus a 1px gradient ring drawn with a
+     mask-composite ::before. No box-shadow — the depth comes from the ring. */
+  .glass-panel {
+    position: relative;
+    isolation: isolate;
+    background-image:
+      linear-gradient(210deg, color-mix(in srgb, #ffffff 28%, transparent) 0px, transparent 38%),
+      linear-gradient(rgba(255, 255, 255, 0.16) 0px, rgba(255, 255, 255, 0.10) 100%);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    color: #ffffff;
+    overflow: hidden;
+    box-shadow:
+      0 6px 24px rgba(20, 12, 38, 0.18),
+      0 1px 0 rgba(255, 255, 255, 0.10) inset;
+  }
+  .glass-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(45deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.75));
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .glass-panel > * {
+    position: relative;
+    z-index: 2;
+  }
+  .glass-pill {
+    border-radius: 999px;
+    padding: 10px 16px;
+  }
+  .glass-rect {
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  /* Pill tabs (active/inactive) */
+  .pill-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--radius-pill);
+    font-weight: 540;
+    font-size: 15px;
+    letter-spacing: -0.005em;
+    color: var(--color-ink);
+    background: transparent;
+    transition: background 0.2s ease, color 0.2s ease;
+    cursor: pointer;
+  }
+  .pill-tab:hover {
+    background: rgba(0, 0, 0, 0.03);
+  }
+  .pill-tab[data-active="true"] {
+    background: var(--color-fog);
+  }
+
+  /* Inline iris link */
+  .link-iris {
+    color: var(--color-iris);
+    font-weight: 540;
+    transition: opacity 0.2s ease;
+  }
+  .link-iris:hover {
+    opacity: 0.78;
+  }
+
+  /* Eyebrow label (small caps tracking) */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 540;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-iris);
+  }
+  .eyebrow-bullet {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-iris);
+  }
 }
 
-body {
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #000;
-  color: #fff;
-  overflow-x: hidden;
+/* ---------- Hero gradient & spotlights ---------- */
+.hero-dusk {
+  background:
+    radial-gradient(circle at 68% 50%, rgba(133, 125, 250, 0.6) 0px, rgba(0, 0, 0, 0) 50%),
+    radial-gradient(circle at 50% 98%, rgba(255, 51, 102, 0.55) 0px, rgba(0, 0, 0, 0) 50%),
+    radial-gradient(circle at 93% 50%, rgba(75, 105, 227, 0.5) 0px, rgba(0, 0, 0, 0) 50%),
+    radial-gradient(circle at 50% 75%, rgba(104, 222, 255, 0.42) 0px, rgba(0, 0, 0, 0) 50%),
+    linear-gradient(to left bottom,
+      rgba(168, 164, 216, 0.7),
+      rgba(107, 165, 232, 0.62),
+      rgba(176, 112, 192, 0.68),
+      rgba(144, 136, 208, 0.62)),
+    #1d1326;
 }
 
-.page-root {
-  opacity: 1;
-  transform: scale(1);
-  filter: blur(0);
-  transition: opacity 300ms ease-out, transform 300ms ease-out, filter 300ms ease-out;
-  will-change: opacity, transform, filter;
+.hero-spot {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.85;
 }
 
-html[data-nav-mode="particles"] .page-root {
+.hero-spot--violet {
+  background: radial-gradient(circle at 22% 32%, rgba(133, 125, 250, 0.55) 0px, rgba(0, 0, 0, 0) 42%);
+  animation: drift-a 22s ease-in-out infinite alternate;
+}
+.hero-spot--pink {
+  background: radial-gradient(circle at 78% 78%, rgba(255, 51, 102, 0.45) 0px, rgba(0, 0, 0, 0) 45%);
+  animation: drift-b 28s ease-in-out infinite alternate;
+}
+.hero-spot--cyan {
+  background: radial-gradient(circle at 60% 22%, rgba(104, 222, 255, 0.4) 0px, rgba(0, 0, 0, 0) 38%);
+  animation: drift-c 30s ease-in-out infinite alternate;
+}
+
+@keyframes drift-a {
+  0% { transform: translate3d(-4%, -2%, 0) scale(1); }
+  100% { transform: translate3d(6%, 4%, 0) scale(1.12); }
+}
+@keyframes drift-b {
+  0% { transform: translate3d(2%, 4%, 0) scale(1.08); }
+  100% { transform: translate3d(-6%, -3%, 0) scale(0.96); }
+}
+@keyframes drift-c {
+  0% { transform: translate3d(0%, 2%, 0) scale(1); }
+  100% { transform: translate3d(-4%, -5%, 0) scale(1.18); }
+}
+
+/* ---------- Hero entrance animations ---------- */
+/* Sub-1s, smooth easeOutExpo curve. Keep translateY small so the motion
+   reads as "settling into place" rather than a swoop. */
+@keyframes fade-down {
+  0%   { opacity: 0; transform: translate3d(0, -14px, 0); filter: blur(6px); }
+  60%  { filter: blur(0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); }
+}
+@keyframes fade-up {
+  0%   { opacity: 0; transform: translate3d(0, 18px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Panel entrance — slightly bigger lift so it reads through the float
+   ambient motion that kicks in afterwards. */
+@keyframes panel-in {
+  0%   { opacity: 0; transform: translate3d(0, 22px, 0) scale(0.96); filter: blur(8px); }
+  60%  { filter: blur(0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+
+/* Float keyframes target the *inner* element so they don't clobber the
+   entrance translate on the outer wrapper. */
+@keyframes float-a {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-6px, -10px, 0); }
+}
+@keyframes float-b {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(8px, -6px, 0); }
+}
+@keyframes float-c {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-4px, 6px, 0); }
+}
+
+.anim-fade-down { animation: fade-down 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.anim-fade-up   { animation: fade-up   0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.anim-fade-in   { animation: fade-in   0.7s ease-out both; }
+.anim-panel-in  { animation: panel-in  0.85s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+.float-a { animation: float-a 7s ease-in-out infinite; }
+.float-b { animation: float-b 9s ease-in-out infinite; }
+.float-c { animation: float-c 11s ease-in-out infinite; }
+
+/* 3D card flip-in — a card descends from above-and-back into place with a
+   rotateX/rotateY combo that simulates a physical card flipping flat.
+   Staggered via animation-delay on each card. */
+@keyframes card-flip-in {
+  0% {
+    opacity: 0;
+    transform:
+      perspective(1400px)
+      rotateX(-32deg)
+      rotateY(6deg)
+      translate3d(0, -28px, -120px);
+  }
+  55% { opacity: 1; }
+  100% {
+    opacity: 1;
+    transform:
+      perspective(1400px)
+      rotateX(0)
+      rotateY(0)
+      translate3d(0, 0, 0);
+  }
+}
+.anim-flip-in {
+  animation: card-flip-in 0.95s cubic-bezier(0.2, 0.75, 0.2, 1) both;
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-flip-in { animation: fade-in 0.3s ease-out both !important; transform: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade-down, .anim-fade-up, .anim-fade-in, .anim-panel-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .float-a, .float-b, .float-c { animation: none !important; }
+  .hero-spot--violet, .hero-spot--pink, .hero-spot--cyan { animation: none !important; }
+}
+
+/* ---------- Marquee for logo bar ---------- */
+@keyframes marquee {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+.marquee-track { animation: marquee 38s linear infinite; }
+
+/* ---------- Reveal on scroll ---------- */
+.reveal {
   opacity: 0;
-  transform: scale(0.98);
-  filter: blur(6px);
+  transform: translateY(16px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+              transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-html[data-nav-mode="particles"] body {
+/* Inline brand mentions — text color WIPES from ink to iris left-to-right,
+   coordinated with an underline that scales in from left to right. Both
+   sweep on the same easing curve so they feel locked together. */
+.brand-mention {
+  position: relative;
+  cursor: pointer;
+  font-weight: 540;
+  /* Two-stop gradient: iris on the left half, ink on the right. The whole
+     gradient is 200% wide so we can slide it across with background-position. */
+  background-image: linear-gradient(
+    to right,
+    var(--color-iris) 0%,
+    var(--color-iris) 50%,
+    var(--color-ink) 50%,
+    var(--color-ink) 100%
+  );
+  background-size: 220% 100%;
+  background-position: 100% 0;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  transition: background-position 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.brand-mention::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--color-iris);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+  border-radius: 999px;
+}
+.brand-mention:hover,
+.brand-mention.brand-mention--active {
+  background-position: 0% 0;
+}
+.brand-mention:hover::after,
+.brand-mention.brand-mention--active::after {
+  transform: scaleX(1);
+}
+/* Tiny entry pulse when the mention BECOMES active (from a tile hover, not
+   from hovering the mention itself) — adds a subtle glow that fades. */
+.brand-mention.brand-mention--active {
+  animation: mention-pulse 0.6s ease-out;
+}
+@keyframes mention-pulse {
+  0% { text-shadow: 0 0 0 rgba(113, 76, 182, 0); }
+  40% { text-shadow: 0 0 14px rgba(113, 76, 182, 0.55); }
+  100% { text-shadow: 0 0 0 rgba(113, 76, 182, 0); }
+}
+
+/* Section frame — matches Superhuman's content-card pattern:
+   thin 1px ink @ 20% alpha top + bottom borders that delineate each section
+   on the parchment canvas. Pairs with the .parchment-card wrapper around
+   the whole content area for a fully-framed page-in-a-page feel. */
+.section-frame {
+  border-top: 1px solid rgba(115, 113, 109, 0.18);
+}
+.section-frame:last-child {
+  border-bottom: 1px solid rgba(115, 113, 109, 0.18);
+}
+
+/* Custom scrollbar for the contribution heatmap — chunky, always visible,
+   iris-tinted gradient thumb that brightens on hover. Force always-on with
+   overflow-x: scroll on the container. */
+.heatmap-scroll {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(113, 76, 182, 0.6) rgba(115, 113, 109, 0.12);
+  overflow-x: scroll !important;
+}
+.heatmap-scroll::-webkit-scrollbar {
+  height: 14px;
+  -webkit-appearance: none;
+}
+.heatmap-scroll::-webkit-scrollbar-track {
+  background: rgba(115, 113, 109, 0.12);
+  border-radius: 999px;
+  border: 1px solid rgba(115, 113, 109, 0.18);
+}
+.heatmap-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    to right,
+    rgba(113, 76, 182, 0.7),
+    rgba(168, 85, 247, 0.7)
+  );
+  border-radius: 999px;
+  border: 2px solid var(--color-bone);
+  transition: background 0.2s ease;
+}
+.heatmap-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    to right,
+    rgba(113, 76, 182, 1),
+    rgba(168, 85, 247, 1)
+  );
+}
+
+.parchment-card {
+  background: var(--color-parchment);
+  border: 1px solid rgba(115, 113, 109, 0.22);
+  border-radius: 28px;
   overflow: hidden;
 }
 
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-25%); }
+/* Page rails — diagonal hatched stripe pattern, like an engineering /
+   notebook page edge. Sits on the body so the parchment card overlays it,
+   leaving the hatched pattern visible only on the rails (left + right). */
+.page-rails {
+  background-color: var(--color-parchment);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(115, 113, 109, 0.34) 0px,
+    rgba(115, 113, 109, 0.34) 1px,
+    transparent 1px,
+    transparent 7px
+  );
 }
 
-.animate-marquee {
-  animation: marquee 25s linear infinite;
+/* Nav links + CTA — subtle hover pill + magnetic shimmer matching Superhuman.
+   Over the hero (white-text mode): tint pill is bone @ 14% alpha + backdrop-blur
+   Past the hero (ink-text mode): tint pill is ink @ 6% alpha
+   The active "Get in touch" CTA has a wash that sweeps across on hover. */
+.nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: currentColor;
+  opacity: 0.88;
+  transition: opacity 0.18s ease, background-color 0.18s ease, color 0.18s ease, transform 0.2s ease;
+  will-change: transform;
+}
+.nav-link::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  z-index: -1;
+}
+.nav-link:hover {
+  opacity: 1;
+}
+.nav-link:hover::before {
+  opacity: 0.08;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.1); }
+.nav-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease-in-out;
+}
+.nav-cta svg {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nav-cta:hover svg {
+  transform: translateX(3px);
+}
+.nav-cta::after {
+  /* The "shimmer" sweep — a soft white diagonal pulse that arcs across the
+     CTA on hover. Subtle, not garish. */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  transition: left 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: none;
+}
+.nav-cta:hover::after {
+  left: 130%;
+}
+.nav-cta--chip {
+  background: var(--color-lavender-chip);
+  color: var(--color-ink);
+}
+.nav-cta--chip:hover {
+  background: color-mix(in srgb, var(--color-lavender-chip) 88%, white 12%);
+}
+.nav-cta--ink {
+  background: var(--color-ink);
+  color: var(--color-bone);
+}
+.nav-cta--ink:hover {
+  background: color-mix(in srgb, var(--color-ink) 88%, black 12%);
 }
 
-@keyframes scroll-left {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+/* Banner CTA — fills to white on hover, flips text colour to aubergine. */
+[data-banner="true"] a:hover .banner-cta {
+  background: #ffffff;
+  color: var(--color-aubergine);
+  border-color: #ffffff;
 }
 
-@keyframes scroll-right {
-  0% { transform: translateX(-50%); }
-  100% { transform: translateX(0); }
+/* Nav surface transitions */
+.nav-surface {
+  background: transparent;
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  border-bottom: 1px solid transparent;
+  transition: background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease;
 }
-
-.animate-scroll-left {
-  animation: scroll-left 130s linear infinite;
-}
-
-.animate-scroll-right {
-  animation: scroll-right 130s linear infinite;
-}
-
-.animate-scroll-left,
-.animate-scroll-right {
-  backface-visibility: hidden;
-  contain: layout style;
-}
-
-@keyframes slideInFromRight {
-  0% {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes scaleInX {
-  0% {
-    transform: scaleX(0);
-  }
-  100% {
-    transform: scaleX(1);
-  }
-}
-
-@keyframes slideOutToRight {
-  0% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-}
-
-@keyframes fadeOut {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-/* AboutSection highlight modes — CSS class-based opacity instead of per-frame JS */
-.about-highlight-skills [data-category="skill"] {
-  opacity: 0.65 !important;
-}
-.about-highlight-skills [data-category="interest"] {
-  opacity: 0.03 !important;
-}
-.about-highlight-interests [data-category="interest"] {
-  opacity: 0.65 !important;
-}
-.about-highlight-interests [data-category="skill"] {
-  opacity: 0.03 !important;
+.nav-surface[data-scrolled="true"] {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--color-fog);
 }
