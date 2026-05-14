@@ -7,7 +7,7 @@ export default function HeroSection() {
   return (
     <section
       id="home"
-      className="relative w-full overflow-hidden text-bone min-h-[480px] md:min-h-screen"
+      className="relative w-full overflow-hidden text-bone min-h-[520px] md:min-h-screen"
       style={{
         // Pull hero up so the banner + nav float OVER it — the video then
         // occupies the entire first viewport, not the part below the chrome.
@@ -41,7 +41,7 @@ export default function HeroSection() {
       {/* Hero content — concise, sits in the upper third so it doesn't
           overlap the portrait silhouette below */}
       <div
-        className="relative z-10 container-page flex flex-col items-center text-center min-h-[480px] md:min-h-screen pt-[150px] md:pt-[200px] pb-0 md:pb-[60px]"
+        className="relative z-10 container-page flex flex-col items-center text-center min-h-[520px] md:min-h-screen pt-[190px] md:pt-[200px] pb-0 md:pb-[60px]"
       >
         <h1
           className="anim-fade-down text-white text-display-fluid max-w-[20ch]"
